@@ -1,2 +1,62 @@
-# lumen-browser
-Lumen — Chromium-based browser for desktop (Electron) and Android: Safari-style UI, Opera GX-style features
+# Lumen
+
+Свой браузер на ядре Chromium: интерфейс в стиле Safari, функции в духе Opera GX.
+
+| Платформа | Движок | Папка |
+|---|---|---|
+| Windows / macOS / Linux | Chromium (через Electron) | `desktop/` |
+| Android | Chromium (системный Android WebView) | `android/` |
+
+Общие файлы (список блокировки, стартовая страница) лежат в `shared/` и используются обеими платформами.
+
+## Что уже есть
+
+**Интерфейс (Safari-стиль)**
+- компактная панель: навигация, адресная строка-«таблетка» по центру (показывает только домен, полный адрес при фокусе), вкладки равной ширины под ней
+- светлая и тёмная тема автоматически, по системе
+- Android: адресная строка и кнопки внизу, как в Safari на iPhone
+
+**Функции (GX-стиль)**
+- боковая панель с закладками, историей и панелью **Lumen Control**
+- блокировщик рекламы и трекеров (список доменов в `shared/blocklist.txt`, счётчик блокировок)
+- усыпление неактивных вкладок: освобождает память, вкладка перезагружается при возврате
+- менеджер вкладок по памяти (аналог Hot Tabs Killer): МБ на вкладку, «Сон» и закрытие
+- принудительный тёмный режим для сайтов
+- свой акцентный цвет, подсветка в стиле GX
+- закладки, история, горячие клавиши
+
+## Запуск (десктоп)
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+Сборка установщика: `npm run dist` (результат в `desktop/dist`).
+
+> В `package.json` стоит Electron `^39`. Для актуальных патчей безопасности Chromium обновляйте: `npm i -D electron@latest`.
+
+## Запуск (Android)
+
+Откройте папку `android/` в Android Studio и нажмите Run. Из консоли: `gradle assembleDebug` (или `gradle wrapper` один раз, чтобы получить `gradlew`).
+
+## CI
+
+GitHub Actions (`.github/workflows/build.yml`) собирает десктоп под все три ОС и debug-APK для Android, артефакты лежат во вкладке Actions.
+
+## Ограничения
+
+- Это не форк Chromium, а оболочка над ним: Electron на десктопе и системный WebView на Android. Полноценный форк (как Opera или Brave) собирается из исходников Chromium: сотни ГБ диска, часы сборки, постоянный мерж обновлений.
+- Нет расширений Chrome, менеджера паролей, синхронизации, Safe Browsing.
+- Разрешения сайтов (камера, микрофон, геолокация) на десктопе пока запрещены по умолчанию, диалога запроса нет.
+- Вход через Google в встроенных браузерах может блокироваться самим Google.
+- Из Opera GX пока нет: VPN, лимитеров CPU и сети, встроенных плееров и мессенджеров, GX Corner.
+
+## Структура
+
+```
+desktop/   Electron: main.js (вкладки, сессия, IPC), preload.js, renderer/ (интерфейс)
+android/   Kotlin: MainActivity.kt (вкладки на WebView), Adblock.kt
+shared/    blocklist.txt, start.html
+```

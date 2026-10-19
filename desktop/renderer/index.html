@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self'">
+<title>Lumen</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div id="bar">
+    <div class="nav">
+      <button id="back" title="Назад">‹</button>
+      <button id="fwd" title="Вперёд">›</button>
+      <button id="reload" title="Обновить">↻</button>
+    </div>
+    <form id="omni" autocomplete="off">
+      <input id="url" type="text" spellcheck="false" placeholder="Поиск или адрес сайта">
+      <button type="button" id="star" title="В закладки">☆</button>
+    </form>
+    <div class="nav"><button id="newtab" title="Новая вкладка">+</button></div>
+  </div>
+  <div id="tabs"></div>
+</header>
+<aside id="side">
+  <button data-panel="bookmarks" title="Закладки">★</button>
+  <button data-panel="history" title="История">◷</button>
+  <button data-panel="control" title="Lumen Control">⚡</button>
+  <span class="grow"></span>
+  <button id="home" title="Главная">⌂</button>
+</aside>
+<section id="panel" hidden></section>
+<script src="app.js"></script>
+</body>
+</html>

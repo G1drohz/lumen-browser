@@ -1,0 +1,31 @@
+# Lumen blocklist: домены рекламы и трекеров, блокируются вместе с поддоменами.
+# По одному на строку, строки с # игнорируются.
+doubleclick.net
+googlesyndication.com
+googleadservices.com
+google-analytics.com
+adservice.google.com
+2mdn.net
+adnxs.com
+adsrvr.org
+amazon-adsystem.com
+criteo.com
+criteo.net
+outbrain.com
+taboola.com
+scorecardresearch.com
+quantserve.com
+moatads.com
+pubmatic.com
+rubiconproject.com
+openx.net
+casalemedia.com
+smartadserver.com
+advertising.com
+hotjar.com
+mixpanel.com
+segment.io
+fullstory.com
+mc.yandex.ru
+an.yandex.ru
+adfox.ru

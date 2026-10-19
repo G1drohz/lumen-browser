@@ -1,0 +1,25 @@
+{
+  "name": "lumen-desktop",
+  "productName": "Lumen",
+  "version": "0.1.0",
+  "description": "Lumen — Chromium-браузер: интерфейс Safari, функции Opera GX",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dev.g1drohz.lumen",
+    "productName": "Lumen",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "adblock.js", "shared-path.js", "renderer/**/*"],
+    "extraResources": [{ "from": "../shared", "to": "shared" }],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg", "category": "public.app-category.productivity" },
+    "linux": { "target": "AppImage", "category": "Network" }
+  }
+}
