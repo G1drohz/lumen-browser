@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('lumen', {
   wallSet: (dataUrl) => call('wall:set', dataUrl),
   wallGet: () => call('wall:get'),
   wallClear: () => send('wall:clear'),
+  scList: () => call('sc:list'),
+  scSet: (list) => call('sc:set', list),
   bookmarks: () => call('bm:list'),
   toggleBookmark: () => call('bm:toggle'),
   removeBookmark: (url) => send('bm:remove', url),
