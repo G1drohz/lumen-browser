@@ -3,13 +3,17 @@
   "productName": "Lumen",
   "version": "0.1.0",
   "description": "Lumen — Chromium-браузер: интерфейс Safari, функции Opera GX",
+  "author": "G1drohz",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "smoke": "electron . --smoke-test",
+    "icon": "node scripts/make-icon.js",
+    "predist": "node scripts/make-icon.js",
     "dist": "electron-builder"
   },
   "devDependencies": {
-    "electron": "^39.0.0",
+    "electron": "latest",
     "electron-builder": "^25.1.8"
   },
   "build": {
@@ -18,7 +22,19 @@
     "directories": { "output": "dist" },
     "files": ["main.js", "preload.js", "adblock.js", "shared-path.js", "renderer/**/*"],
     "extraResources": [{ "from": "../shared", "to": "shared" }],
-    "win": { "target": "nsis" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lumen",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "language": "1049",
+      "artifactName": "Lumen-Setup-${version}.${ext}"
+    },
     "mac": { "target": "dmg", "category": "public.app-category.productivity" },
     "linux": { "target": "AppImage", "category": "Network" }
   }

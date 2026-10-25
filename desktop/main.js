@@ -1,10 +1,11 @@
-const { app, BaseWindow, WebContentsView, ipcMain, session, Menu } = require('electron');
+const { app, BaseWindow, WebContentsView, ipcMain, session, Menu, nativeTheme } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const SHARED = require('./shared-path');
 const { setupAdblock, adblockStats } = require('./adblock');
 
+const SMOKE = process.argv.includes('--smoke-test');
 const TOP = 80; // высота верхней панели: адресная строка + вкладки
 const SIDE = 56; // ширина боковой панели
 const START = pathToFileURL(path.join(SHARED, 'start.html')).href;
@@ -12,6 +13,11 @@ const DARK_CSS =
   'html{filter:invert(1) hue-rotate(180deg)!important;background:#fff}' +
   'img,video,picture,canvas{filter:invert(1) hue-rotate(180deg)!important}';
 const DEFAULTS = { adblock: true, sleep: true, sleepMin: 10, forceDark: false, sidebar: true, accent: '#7c5cff' };
+const THEME = {
+  dark: { bg: '#1c1c20', bar: '#26262b', symbol: '#9a9aa5' },
+  light: { bg: '#f5f5f7', bar: '#ececf0', symbol: '#6e6e73' },
+};
+const theme = () => (nativeTheme.shouldUseDarkColors ? THEME.dark : THEME.light);
 
 let win = null;
 let ui = null;
@@ -215,26 +221,37 @@ function pushState() {
   });
 }
 
-function createWindow() {
+// Цвета окна и кнопок «свернуть/закрыть» следуют за системной темой
+function applyTheme() {
+  if (!win || win.isDestroyed()) return;
+  const t = theme();
+  try { win.setBackgroundColor(t.bg); } catch {}
+  try { win.setTitleBarOverlay({ color: t.bar, symbolColor: t.symbol, height: 44 }); } catch {}
+  try { ui.setBackgroundColor(t.bg); } catch {}
+}
+nativeTheme.on('updated', applyTheme);
+
+function createWindow(initialUrl) {
+  const t = theme();
   win = new BaseWindow({
     width: 1280,
     height: 820,
     minWidth: 720,
     minHeight: 480,
-    backgroundColor: '#1c1c20',
+    backgroundColor: t.bg,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#26262b', symbolColor: '#9a9aa5', height: 44 },
+    titleBarOverlay: { color: t.bar, symbolColor: t.symbol, height: 44 },
     trafficLightPosition: { x: 16, y: 14 },
   });
   win.setMenuBarVisibility(false);
   ui = new WebContentsView({ webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true } });
-  ui.setBackgroundColor('#1c1c20');
+  ui.setBackgroundColor(t.bg);
   win.contentView.addChildView(ui); // добавлен первым, значит под страницами
   ui.webContents.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.on('resize', layout);
   win.on('closed', () => { win = null; });
   layout();
-  newTab();
+  newTab(initialUrl || START);
 }
 
 function buildMenu() {
@@ -276,7 +293,7 @@ const fromUI = (e) => ui && e.sender === ui.webContents;
 const on = (ch, fn) => ipcMain.on(ch, (e, ...a) => { if (fromUI(e)) fn(...a); });
 const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => (fromUI(e) ? fn(...a) : null));
 
-on('ui:ready', pushState);
+on('ui:ready', () => pushState());
 on('tab:new', () => newTab());
 on('tab:activate', (id) => activate(id));
 on('tab:close', (id) => closeTab(id));
@@ -344,17 +361,39 @@ handle('tabs:metrics', () => {
 handle('adblock:stats', () => adblockStats());
 
 // ---------- запуск ----------
-app.whenReady().then(() => {
-  load();
-  const ses = session.fromPartition('persist:lumen');
-  ses.setUserAgent(app.userAgentFallback.replace(/\s(Electron|Lumen|lumen-desktop)\/\S+/gi, ''));
-  // Пока нет диалога запроса, разрешаем только безопасное
-  ses.setPermissionRequestHandler((_wc, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
-  setupAdblock(ses, () => data.settings.adblock);
-  createWindow();
-  buildMenu();
-  setInterval(sleepSweep, 30000);
-});
+app.setAppUserModelId('dev.g1drohz.lumen');
+
+// Один экземпляр: повторный запуск открывает адрес в уже запущенном окне
+const gotLock = SMOKE || app.requestSingleInstanceLock();
+const urlFromArgs = (argv) => argv.find((a) => /^https?:\/\//i.test(a));
+
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_e, argv) => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+    const u = urlFromArgs(argv);
+    if (u) newTab(u);
+  });
+
+  app.whenReady().then(() => {
+    load();
+    const ses = session.fromPartition('persist:lumen');
+    ses.setUserAgent(app.userAgentFallback.replace(/\s(Electron|Lumen|lumen-desktop)\/\S+/gi, ''));
+    // Пока нет диалога запроса, разрешаем только безопасное
+    ses.setPermissionRequestHandler((_wc, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write', 'pointerLock'].includes(perm)));
+    setupAdblock(ses, () => data.settings.adblock);
+    createWindow(urlFromArgs(process.argv));
+    buildMenu();
+    setInterval(sleepSweep, 30000);
+    if (SMOKE) {
+      require('./smoke')({ ui: () => ui, tabs, newTab, activate, sleepTab, adblockStats });
+    }
+  });
+}
 
 app.on('before-quit', saveNow);
 app.on('window-all-closed', () => app.quit());

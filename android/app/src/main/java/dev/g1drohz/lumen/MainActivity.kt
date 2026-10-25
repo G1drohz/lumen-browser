@@ -35,6 +35,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
@@ -99,6 +100,11 @@ class MainActivity : AppCompatActivity() {
         window.statusBarColor = bg
         @Suppress("DEPRECATION")
         window.navigationBarColor = bg
+        // Тёмные иконки статус-бара на светлой теме, светлые — на тёмной
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !night
+            isAppearanceLightNavigationBars = !night
+        }
 
         newTab(intent?.dataString ?: HOME)
 
@@ -211,7 +217,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun go(input: String) {
         load(tabs[cur], toUrl(input))
+        // clearFocus() сам по себе вернёт фокус в единственный EditText, поэтому передаём фокус странице
         urlBox.clearFocus()
+        web().requestFocus()
         (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(urlBox.windowToken, 0)
     }

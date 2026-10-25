@@ -1,0 +1,75 @@
+name: release
+
+# Запуск: вручную (Actions -> release -> Run workflow) или пушем тега v*.
+# Результат: релиз на GitHub с установщиком Windows (.exe) и APK для Android.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег релиза"
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run dist -- --win --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-installer
+          path: desktop/dist/Lumen-Setup-*.exe
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - run: gradle assembleDebug
+      - run: cp app/build/outputs/apk/debug/app-debug.apk Lumen-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/Lumen-android.apk
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: Lumen ${{ inputs.tag || github.ref_name }}
+          body: |
+            **Windows:** скачайте `Lumen-Setup-*.exe` и запустите — всё необходимое уже внутри.
+            **Android:** скачайте `Lumen-android.apk`, разрешите установку из этого источника и откройте файл.
+          files: dist/*

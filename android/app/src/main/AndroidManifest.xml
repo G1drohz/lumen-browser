@@ -5,6 +5,8 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="Lumen"
         android:supportsRtl="true"
         android:theme="@style/Theme.Lumen"

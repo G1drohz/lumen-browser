@@ -84,6 +84,7 @@ $('#url').addEventListener('focus', () => {
   setTimeout(() => $('#url').select());
 });
 $('#url').addEventListener('blur', () => { urlFocused = false; render(); });
+$('#url').addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#url').blur(); });
 
 // ---------- боковые панели ----------
 document.querySelectorAll('#side [data-panel]').forEach((b) => {
@@ -121,24 +122,27 @@ function entry(title, url, onOpen, onRemove) {
 
 async function renderPanel() {
   const p = $('#panel');
+  const name = panel;
   clearInterval(killTimer);
 
-  if (panel === 'bookmarks') {
+  if (name === 'bookmarks') {
     const list = await lumen.bookmarks();
+    if (panel !== name) return;
     p.replaceChildren(
       h('h2', {}, 'Закладки'),
       ...(list.length
         ? list.map((b) => entry(b.title, b.url, () => lumen.go(b.url), () => { lumen.removeBookmark(b.url); setTimeout(renderPanel, 50); }))
         : [empty('Пока пусто. Нажмите ☆ в адресной строке.')])
     );
-  } else if (panel === 'history') {
+  } else if (name === 'history') {
     const list = await lumen.history();
+    if (panel !== name) return;
     p.replaceChildren(
       h('h2', {}, 'История'),
       ...(list.length ? list.map((x) => entry(x.title, x.url, () => lumen.go(x.url))) : [empty('История пуста.')]),
       list.length ? h('button', { class: 'btn', onclick: () => { lumen.clearHistory(); setTimeout(renderPanel, 50); } }, 'Очистить историю') : null
     );
-  } else if (panel === 'control') {
+  } else if (name === 'control') {
     const s = S.settings;
     const toggle = (key, label) =>
       h('label', { class: 'row' }, h('span', {}, label),
@@ -166,11 +170,13 @@ async function renderPanel() {
 }
 
 async function refreshKill() {
-  const box = $('#kill');
-  if (!box) return;
+  if (panel !== 'control') return;
   const [list, st] = await Promise.all([lumen.metrics(), lumen.blocked()]);
-  if (!list || !st) return;
-  $('#stats').textContent = `Заблокировано запросов: ${st.blocked} · правил: ${st.rules}`;
+  // пока ждали ответ, панель могли закрыть — проверяем ещё раз
+  const box = $('#kill');
+  const stats = $('#stats');
+  if (panel !== 'control' || !box || !stats || !list || !st) return;
+  stats.textContent = `Заблокировано запросов: ${st.blocked} · правил: ${st.rules}`;
   box.replaceChildren(
     ...list.map((t) =>
       h('div', { class: 'kill' },

@@ -2,6 +2,7 @@ name: build
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -21,7 +22,19 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npx electron-builder --publish never
+      - name: Syntax check
+        shell: bash
+        run: |
+          for f in main.js preload.js adblock.js shared-path.js smoke.js scripts/make-icon.js renderer/app.js; do
+            node --check "$f"
+          done
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx electron . --no-sandbox --disable-gpu --smoke-test
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron . --smoke-test
+      - run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
