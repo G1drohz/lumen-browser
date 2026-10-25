@@ -9,7 +9,7 @@ on:
     inputs:
       tag:
         description: "Тег релиза"
-        default: "v0.1.0"
+        default: "v3.0.1"
 
 permissions:
   contents: write
@@ -22,6 +22,12 @@ jobs:
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
+      - name: Bake full main.js
+        shell: bash
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js" -o main.js
+          node --check main.js
+          wc -c main.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22

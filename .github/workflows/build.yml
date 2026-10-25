@@ -18,6 +18,11 @@ jobs:
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
+      - name: Bake full main.js
+        shell: bash
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js" -o main.js
+          node --check main.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -30,9 +35,11 @@ jobs:
           done
       - name: Smoke test (Linux)
         if: runner.os == 'Linux'
+        timeout-minutes: 2
         run: xvfb-run -a npx electron . --no-sandbox --disable-gpu --smoke-test
       - name: Smoke test (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 2
         run: npx electron . --smoke-test
       - run: npm run dist
         env:
