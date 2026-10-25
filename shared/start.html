@@ -47,6 +47,14 @@ a b{font-weight:500;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-
 a i{width:60px;height:60px;border-radius:16px;display:grid;place-items:center;font-style:normal;font-size:22px;font-weight:600;color:#fff;background:var(--accent);transition:transform .15s}
 a:hover i{transform:translateY(-3px)}
 .note{margin:0;color:color-mix(in srgb, CanvasText 70%, transparent);text-align:center;font-size:14px}
+.tile{position:relative}
+.tile .rm{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:color-mix(in srgb, CanvasText 75%, transparent);color:Canvas;font:12px/22px system-ui;cursor:pointer;opacity:0;transition:opacity .15s}
+.tile:hover .rm{opacity:1}
+.sc-add i{background:color-mix(in srgb, CanvasText 18%, transparent)!important;color:inherit!important;border:1px dashed color-mix(in srgb, CanvasText 35%, transparent)}
+.sc-add:hover i{transform:translateY(-3px);border-color:var(--accent)}
+#editbar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#editbar button{padding:8px 14px;border-radius:10px;border:1px solid color-mix(in srgb, CanvasText 15%, transparent);background:color-mix(in srgb, Canvas 82%, transparent);color:inherit;font:inherit;cursor:pointer}
+#editbar button:hover{border-color:var(--accent)}
 @media (max-width:520px){.grid{grid-template-columns:repeat(3,84px)} h1{font-size:34px}}
 </style>
 </head>
@@ -55,18 +63,41 @@ a:hover i{transform:translateY(-3px)}
 <main>
   <h1>Lumen</h1>
   <form action="https://duckduckgo.com/" method="get"><input name="q" placeholder="Поиск в DuckDuckGo" autocomplete="off"></form>
-  <div class="grid" id="shortcuts">
-    <a href="https://github.com"><i style="background:#24292f">G</i><b>GitHub</b></a>
-    <a href="https://www.youtube.com"><i style="background:#e62117">Y</i><b>YouTube</b></a>
-    <a href="https://ru.wikipedia.org"><i style="background:#636466">W</i><b>Wikipedia</b></a>
-    <a href="https://www.reddit.com"><i style="background:#ff4500">R</i><b>Reddit</b></a>
-    <a href="https://web.telegram.org"><i style="background:#2aabee">T</i><b>Telegram</b></a>
-    <a href="https://ya.ru"><i style="background:#fc3f1d">Я</i><b>Яндекс</b></a>
-    <a href="https://claude.ai"><i style="background:#d97757">C</i><b>Claude</b></a>
-    <a href="https://www.twitch.tv"><i style="background:#9146ff">T</i><b>Twitch</b></a>
-  </div>
+  <div class="grid" id="shortcuts"></div>
+  <div id="editbar" hidden></div>
 </main>
 <script>
+function sendSc(payload) {
+  console.log('LUMEN_SC ' + JSON.stringify(payload));
+}
+function tile(b, editable) {
+  var wrap = document.createElement('div');
+  wrap.className = 'tile';
+  var a = document.createElement('a');
+  a.href = b.url;
+  var i = document.createElement('i');
+  var title = String(b.title || b.url);
+  i.textContent = title.trim().charAt(0).toUpperCase() || '\u2022';
+  var label = document.createElement('b');
+  label.textContent = title;
+  a.appendChild(i);
+  a.appendChild(label);
+  wrap.appendChild(a);
+  if (editable) {
+    var rm = document.createElement('button');
+    rm.className = 'rm';
+    rm.type = 'button';
+    rm.title = '\u0423\u0434\u0430\u043b\u0438\u0442\u044c';
+    rm.textContent = '\u2715';
+    rm.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      sendSc({ op: 'remove', url: b.url });
+    });
+    wrap.appendChild(rm);
+  }
+  return wrap;
+}
 window.applyLumen = function (cfg) {
   cfg = cfg || {};
   var accent = /^#[0-9a-f]{6}$/i.test(cfg.accent) ? cfg.accent : '#7c5cff';
@@ -83,31 +114,62 @@ window.applyLumen = function (cfg) {
     document.body.style.backgroundImage = '';
   }
   if (cfg.fontScale) document.body.style.fontSize = Math.round(15 * cfg.fontScale / 100) + 'px';
-  if (!cfg.bookmarksMode) return;
   var grid = document.getElementById('shortcuts');
-  var list = Array.isArray(cfg.bookmarks) ? cfg.bookmarks : [];
+  var bar = document.getElementById('editbar');
   grid.textContent = '';
-  if (!list.length) {
-    grid.style.display = 'block';
-    var p = document.createElement('p');
-    p.className = 'note';
-    p.textContent = 'Закладок пока нет. Откройте сайт и нажмите звёздочку в адресной строке.';
-    grid.appendChild(p);
+  grid.style.display = '';
+  if (cfg.bookmarksMode) {
+    bar.hidden = true;
+    var list = Array.isArray(cfg.bookmarks) ? cfg.bookmarks : [];
+    if (!list.length) {
+      grid.style.display = 'block';
+      var p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = '\u0417\u0430\u043a\u043b\u0430\u0434\u043e\u043a \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0441\u0430\u0439\u0442 \u0438 \u043d\u0430\u0436\u043c\u0438\u0442\u0435 \u0437\u0432\u0451\u0437\u0434\u043e\u0447\u043a\u0443 \u0432 \u0430\u0434\u0440\u0435\u0441\u043d\u043e\u0439 \u0441\u0442\u0440\u043e\u043a\u0435.';
+      grid.appendChild(p);
+      return;
+    }
+    list.forEach(function (b) {
+      if (!b || !/^https?:\/\//i.test(b.url || '')) return;
+      grid.appendChild(tile(b, false));
+    });
     return;
   }
-  list.forEach(function (b) {
+  var shortcuts = Array.isArray(cfg.shortcuts) ? cfg.shortcuts : [];
+  shortcuts.forEach(function (b) {
     if (!b || !/^https?:\/\//i.test(b.url || '')) return;
-    var a = document.createElement('a');
-    a.href = b.url;
-    var i = document.createElement('i');
-    var title = String(b.title || b.url);
-    i.textContent = title.trim().charAt(0).toUpperCase() || '•';
-    var label = document.createElement('b');
-    label.textContent = title;
-    a.appendChild(i);
-    a.appendChild(label);
-    grid.appendChild(a);
+    grid.appendChild(tile(b, !!cfg.editable));
   });
+  if (cfg.editable) {
+    var add = document.createElement('a');
+    add.href = '#';
+    add.className = 'sc-add';
+    add.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      var url = prompt('\u0410\u0434\u0440\u0435\u0441 \u0441\u0430\u0439\u0442\u0430 \u0434\u043b\u044f \u044d\u043a\u0441\u043f\u0440\u0435\u0441\u0441-\u043f\u0430\u043d\u0435\u043b\u0438', 'https://');
+      if (!url) return;
+      url = url.trim();
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      var title = prompt('\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435', url.replace(/^https?:\/\//i, '').split('/')[0]) || url;
+      sendSc({ op: 'add', url: url, title: title });
+    });
+    var ai = document.createElement('i');
+    ai.textContent = '+';
+    var ab = document.createElement('b');
+    ab.textContent = '\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c';
+    add.appendChild(ai);
+    add.appendChild(ab);
+    grid.appendChild(add);
+    bar.hidden = false;
+    bar.replaceChildren();
+    var reset = document.createElement('button');
+    reset.type = 'button';
+    reset.textContent = '\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c \u043f\u0430\u043d\u0435\u043b\u044c';
+    reset.addEventListener('click', function () { sendSc({ op: 'reset' }); });
+    bar.appendChild(reset);
+  } else {
+    bar.hidden = true;
+  }
 };
 </script>
 </body>
