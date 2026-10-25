@@ -20,21 +20,41 @@ button:disabled{opacity:.35;cursor:default;background:none}
 #star,#zoom,#fill{height:calc(24px * var(--ui));min-width:24px;padding:0 4px;font-size:12px;flex:none}
 #star.on,#fill.on{color:var(--accent)}
 #zoom{color:var(--accent);font-weight:600}
-#tabs-row{height:calc(36px * var(--ui));display:flex;align-items:stretch;gap:4px;padding:3px 8px 4px;overflow:hidden}
-#tabs{flex:1;min-width:0;display:flex;gap:4px;overflow:hidden}
-#newtab{flex:none;width:calc(32px * var(--ui));height:calc(28px * var(--ui));align-self:center;font-size:calc(20px * var(--ui));line-height:1;border-radius:8px;color:var(--mute);-webkit-app-region:no-drag}
+/* Safari-style tabs + compact new-tab cube */
+#tabs-row{height:calc(34px * var(--ui));display:flex;align-items:flex-end;gap:0;padding:4px 8px 0;overflow:hidden}
+#tabs{flex:1;min-width:0;display:flex;gap:1px;overflow:hidden;align-items:flex-end}
+#newtab{
+  flex:none;width:calc(28px * var(--ui));height:calc(28px * var(--ui));
+  margin:0 4px 3px;align-self:center;
+  font-size:calc(18px * var(--ui));line-height:1;font-weight:400;
+  border-radius:8px;color:var(--mute);
+  background:color-mix(in srgb,var(--fg) 6%,transparent);
+  -webkit-app-region:no-drag
+}
 #newtab:hover{color:var(--fg);background:var(--hover)}
-.tab{flex:1 1 0;min-width:48px;max-width:220px;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;border-radius:8px 8px 0 0;color:var(--mute);cursor:default}
+.tab{
+  flex:1 1 0;min-width:72px;max-width:200px;
+  display:flex;align-items:center;gap:6px;
+  height:calc(30px * var(--ui));
+  padding:0 6px 0 10px;
+  border-radius:8px 8px 0 0;
+  color:var(--mute);cursor:default;
+  position:relative
+}
 .tab:hover{background:var(--hover)}
-.tab.active{background:var(--bg);color:var(--fg);box-shadow:none}
+.tab.active{
+  background:var(--bg);color:var(--fg);
+  box-shadow:0 -1px 0 var(--line)
+}
 .tab.sleep .t{opacity:.55;font-style:italic}
-.tab .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(12px * var(--font))}
 .tab img,.tab .dot{width:14px;height:14px;border-radius:3px;flex:none}
 .tab .dot{background:var(--mute);opacity:.4;border-radius:50%}
 .tab.loading .dot{background:var(--accent);opacity:1;animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.2}}
-.tab .x{width:18px;height:18px;font-size:12px;line-height:1;opacity:0;flex:none}
-.tab:hover .x,.tab.active .x{opacity:.7}
+.tab .x{width:18px;height:18px;font-size:11px;line-height:1;opacity:0;flex:none;border-radius:4px}
+.tab:hover .x,.tab.active .x{opacity:.65}
+.tab .x:hover{opacity:1;background:var(--hover)}
 #find,#ask{display:flex;align-items:center;gap:6px;padding:4px 10px 8px}
 #find[hidden],#ask[hidden]{display:none}
 #find input{flex:1;min-width:0;border:1px solid var(--line);background:var(--pill);color:inherit;border-radius:8px;padding:5px 8px;font:inherit;user-select:text;outline:0}
