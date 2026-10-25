@@ -13,17 +13,20 @@ button:disabled{opacity:.35;cursor:default;background:none}
 .win32 #bar,.linux #bar{padding-right:calc(150px * var(--ui))}
 .nav{display:flex;gap:2px}
 .nav button{width:calc(30px * var(--ui));height:calc(30px * var(--ui));font-size:calc(18px * var(--ui));line-height:1}
-#omni{flex:1;max-width:640px;margin:0 auto;display:flex;align-items:center;gap:4px;height:calc(30px * var(--ui));padding:0 4px 0 12px;background:var(--pill);border:1px solid var(--line);border-radius:10px;-webkit-app-region:no-drag;transition:box-shadow .15s}
+#omni{flex:1;max-width:640px;margin:0 auto;display:flex;align-items:center;gap:4px;height:calc(30px * var(--ui));padding:0 4px 0 12px;background:var(--pill);border:1px solid var(--line);border-radius:12px;-webkit-app-region:no-drag;transition:box-shadow .15s}
 #omni:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
 #url{flex:1;min-width:0;border:0;outline:0;background:none;color:inherit;font:inherit;text-align:center;user-select:text}
 #url:focus{text-align:left}
 #star,#zoom,#fill{height:calc(24px * var(--ui));min-width:24px;padding:0 4px;font-size:12px;flex:none}
 #star.on,#fill.on{color:var(--accent)}
 #zoom{color:var(--accent);font-weight:600}
-#tabs{height:calc(36px * var(--ui));display:flex;gap:4px;padding:3px 8px 4px;overflow:hidden}
-.tab{flex:1 1 0;min-width:48px;max-width:240px;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;border-radius:8px;color:var(--mute);cursor:default}
+#tabs-row{height:calc(36px * var(--ui));display:flex;align-items:stretch;gap:4px;padding:3px 8px 4px;overflow:hidden}
+#tabs{flex:1;min-width:0;display:flex;gap:4px;overflow:hidden}
+#newtab{flex:none;width:calc(32px * var(--ui));height:calc(28px * var(--ui));align-self:center;font-size:calc(20px * var(--ui));line-height:1;border-radius:8px;color:var(--mute);-webkit-app-region:no-drag}
+#newtab:hover{color:var(--fg);background:var(--hover)}
+.tab{flex:1 1 0;min-width:48px;max-width:220px;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;border-radius:8px 8px 0 0;color:var(--mute);cursor:default}
 .tab:hover{background:var(--hover)}
-.tab.active{background:var(--pill);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.tab.active{background:var(--bg);color:var(--fg);box-shadow:none}
 .tab.sleep .t{opacity:.55;font-style:italic}
 .tab .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab img,.tab .dot{width:14px;height:14px;border-radius:3px;flex:none}
