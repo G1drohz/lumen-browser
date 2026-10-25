@@ -20,7 +20,7 @@
     "appId": "dev.g1drohz.lumen",
     "productName": "Lumen",
     "directories": { "output": "dist" },
-    "files": ["main.js", "main-data-a.json", "main-data-b.json", "preload.js", "adblock.js", "shared-path.js", "themes.js", "vault.js", "renderer/**/*"],
+    "files": ["main.js", "preload.js", "adblock.js", "shared-path.js", "themes.js", "vault.js", "renderer/**/*"],
     "extraResources": [{ "from": "../shared", "to": "shared" }],
     "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
     "nsis": {
