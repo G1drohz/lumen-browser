@@ -18,10 +18,11 @@ jobs:
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Bake full main.js
+      - name: Bake full main.js + patch
         shell: bash
         run: |
           curl -fsSL "https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js" -o main.js
+          node scripts/patch-main.js
           node --check main.js
       - uses: actions/setup-node@v4
         with:
