@@ -60,6 +60,29 @@ module.exports = function smoke(ctx) {
       const s = await js("lumen.setSettings({ forceDark: true, accent: '#ff0066' })");
       check(s && s.forceDark === true && s.accent === '#ff0066', 'settings:set не работает');
 
+      // Оформление, запуск, масштаб
+      await js("document.querySelector('[data-panel=settings]').click()");
+      await sleep(500);
+      check(await js("!document.querySelector('#panel').hidden && document.body.innerText.includes('Оформление')"), 'панель оформления не открылась');
+      const look = await js("lumen.setSettings({ theme: 'paper', wallpaper: 'ocean', startup: 'bookmarks', uiScale: 120, fontScale: 110, pageZoom: 80, sidebar: false })");
+      check(look && look.theme === 'paper' && look.wallpaper === 'ocean' && look.startup === 'bookmarks' && look.uiScale === 120 && look.pageZoom === 80 && look.sidebar === false, 'новые настройки оформления');
+      await sleep(300);
+      check(await js("document.body.classList.contains('nosidebar')"), 'боковая панель не скрылась');
+      await js("lumen.setSettings({ theme: 'system', wallpaper: 'dusk', startup: 'newtab', uiScale: 100, fontScale: 100, pageZoom: 100, sidebar: true, forceDark: true, accent: '#ff0066' })");
+      await sleep(300);
+
+      // Менеджер паролей: в списке нет секрета, раскрытие работает
+      await js("document.querySelector('[data-panel=passwords]').click()");
+      await sleep(400);
+      check(await js("document.body.innerText.includes('Пароли')"), 'панель паролей не открылась');
+      const vault = await js("(async () => { const save = await lumen.pwSave({ origin: 'https://example.com', username: 'ada', password: 's3cret' }); const list = await lumen.passwords(); const pw = list[0] ? await lumen.pwReveal(list[0].id) : ''; if (list[0]) lumen.pwRemove(list[0].id); await new Promise((r) => setTimeout(r, 80)); const left = await lumen.passwords(); return { ok: !!(save && save.ok), n: list.length, keys: list[0] ? Object.keys(list[0]).join(',') : '', pw, left: left.length }; })()");
+      check(vault && vault.ok && vault.n === 1 && vault.pw === 's3cret' && vault.left === 0 && vault.keys.indexOf('secret') < 0 && vault.keys.indexOf('password') < 0, 'менеджер паролей: ' + JSON.stringify(vault));
+
+      await js("document.querySelector('[data-panel=downloads]').click()");
+      await sleep(300);
+      check(await js("document.body.innerText.includes('Загрузки')"), 'панель загрузок не открылась');
+      await js("document.querySelector('[data-panel=downloads]').click()");
+
       // Закрытие вкладки крестиком
       await js("document.querySelector('.tab .x').click()");
       await sleep(800);

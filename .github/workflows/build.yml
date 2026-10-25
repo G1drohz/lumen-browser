@@ -25,7 +25,7 @@ jobs:
       - name: Syntax check
         shell: bash
         run: |
-          for f in main.js preload.js adblock.js shared-path.js smoke.js scripts/make-icon.js renderer/app.js; do
+          for f in main.js preload.js adblock.js shared-path.js themes.js vault.js smoke.js scripts/make-icon.js renderer/app.js; do
             node --check "$f"
           done
       - name: Smoke test (Linux)

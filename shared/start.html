@@ -6,29 +6,109 @@
 <title>Новая вкладка</title>
 <style>
 :root{color-scheme:light dark;--accent:#7c5cff}
-body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,color-mix(in srgb,var(--accent) 35%,transparent),transparent),Canvas;color:CanvasText}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:Canvas;color:CanvasText}
+body[data-mode="dark"]{color:#f4f4f7;color-scheme:dark}
+body[data-mode="light"]{color:#1d1d1f;color-scheme:light}
+body[data-wall="dusk"]{background:
+  radial-gradient(900px 520px at 15% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 60%),
+  radial-gradient(700px 480px at 100% 80%, #ff2bd655, transparent 55%), #12121a}
+body[data-wall="aurora"]{background:
+  radial-gradient(800px 500px at 10% 20%, #3dffc866, transparent 60%),
+  radial-gradient(700px 500px at 90% 10%, #7c5cff55, transparent 55%),
+  radial-gradient(600px 400px at 70% 100%, #1a6bff44, transparent 50%), #071410}
+body[data-wall="ember"]{background:
+  radial-gradient(800px 480px at 20% 100%, #ff6a3d88, transparent 55%),
+  radial-gradient(600px 400px at 90% 0%, #ffc14a55, transparent 50%), #160e0a}
+body[data-wall="ocean"]{background:
+  radial-gradient(900px 500px at 50% 120%, #1a6bff88, transparent 55%),
+  radial-gradient(500px 400px at 0% 0%, #4aa8ff55, transparent 50%), #071018}
+body[data-wall="forest"]{background:
+  radial-gradient(700px 500px at 0% 100%, #1f8a4c88, transparent 55%),
+  radial-gradient(600px 400px at 100% 0%, #c6f54a44, transparent 50%), #0c1610}
+body[data-wall="mesh"]{background:
+  radial-gradient(400px 400px at 20% 30%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 70%),
+  radial-gradient(380px 380px at 80% 20%, #ff7ad955, transparent 70%),
+  radial-gradient(420px 420px at 60% 80%, #4aa8ff55, transparent 70%), #101014}
+body[data-wall="grid"]{background:
+  linear-gradient(color-mix(in srgb, CanvasText 8%, transparent) 1px, transparent 1px),
+  linear-gradient(90deg, color-mix(in srgb, CanvasText 8%, transparent) 1px, transparent 1px),
+  Canvas;background-size:32px 32px,32px 32px,auto}
+#shade{position:fixed;inset:0;background:color-mix(in srgb, Canvas 42%, transparent);pointer-events:none}
+body[data-wall="none"] #shade,body:not([data-wall]) #shade{display:none}
+main{position:relative;z-index:1;width:min(760px,92vw);display:flex;flex-direction:column;align-items:center;gap:28px;padding:32px 0}
 h1{margin:0;font-weight:600;font-size:42px;letter-spacing:-.02em}
-form{width:min(560px,86vw)}
-input{width:100%;box-sizing:border-box;padding:14px 18px;border-radius:14px;border:1px solid color-mix(in srgb,CanvasText 15%,transparent);background:color-mix(in srgb,Canvas 85%,CanvasText 5%);color:inherit;font:inherit;outline:0}
-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
-.grid{display:grid;grid-template-columns:repeat(4,84px);gap:16px}
-a{display:flex;flex-direction:column;align-items:center;gap:8px;color:inherit;text-decoration:none;font-size:12px}
-a i{width:60px;height:60px;border-radius:16px;display:grid;place-items:center;font-style:normal;font-size:24px;font-weight:600;color:#fff;transition:transform .15s}
+form{width:min(560px,100%)}
+input{width:100%;padding:14px 18px;border-radius:14px;border:1px solid color-mix(in srgb, CanvasText 15%, transparent);background:color-mix(in srgb, Canvas 82%, transparent);color:inherit;font:inherit;outline:0}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent)}
+.grid{display:grid;grid-template-columns:repeat(4,84px);gap:16px;justify-content:center}
+a{display:flex;flex-direction:column;align-items:center;gap:8px;color:inherit;text-decoration:none;font-size:12px;min-width:0}
+a b{font-weight:500;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a i{width:60px;height:60px;border-radius:16px;display:grid;place-items:center;font-style:normal;font-size:22px;font-weight:600;color:#fff;background:var(--accent);transition:transform .15s}
 a:hover i{transform:translateY(-3px)}
+.note{margin:0;color:color-mix(in srgb, CanvasText 70%, transparent);text-align:center;font-size:14px}
+@media (max-width:520px){.grid{grid-template-columns:repeat(3,84px)} h1{font-size:34px}}
 </style>
 </head>
 <body>
-<h1>Lumen</h1>
-<form action="https://duckduckgo.com/" method="get"><input name="q" placeholder="Поиск в DuckDuckGo" autocomplete="off"></form>
-<div class="grid">
-<a href="https://github.com"><i style="background:#24292f">G</i>GitHub</a>
-<a href="https://www.youtube.com"><i style="background:#e62117">Y</i>YouTube</a>
-<a href="https://ru.wikipedia.org"><i style="background:#636466">W</i>Wikipedia</a>
-<a href="https://www.reddit.com"><i style="background:#ff4500">R</i>Reddit</a>
-<a href="https://web.telegram.org"><i style="background:#2aabee">T</i>Telegram</a>
-<a href="https://ya.ru"><i style="background:#fc3f1d">Я</i>Яндекс</a>
-<a href="https://claude.ai"><i style="background:#d97757">C</i>Claude</a>
-<a href="https://www.twitch.tv"><i style="background:#9146ff">T</i>Twitch</a>
-</div>
+<div id="shade"></div>
+<main>
+  <h1>Lumen</h1>
+  <form action="https://duckduckgo.com/" method="get"><input name="q" placeholder="Поиск в DuckDuckGo" autocomplete="off"></form>
+  <div class="grid" id="shortcuts">
+    <a href="https://github.com"><i style="background:#24292f">G</i><b>GitHub</b></a>
+    <a href="https://www.youtube.com"><i style="background:#e62117">Y</i><b>YouTube</b></a>
+    <a href="https://ru.wikipedia.org"><i style="background:#636466">W</i><b>Wikipedia</b></a>
+    <a href="https://www.reddit.com"><i style="background:#ff4500">R</i><b>Reddit</b></a>
+    <a href="https://web.telegram.org"><i style="background:#2aabee">T</i><b>Telegram</b></a>
+    <a href="https://ya.ru"><i style="background:#fc3f1d">Я</i><b>Яндекс</b></a>
+    <a href="https://claude.ai"><i style="background:#d97757">C</i><b>Claude</b></a>
+    <a href="https://www.twitch.tv"><i style="background:#9146ff">T</i><b>Twitch</b></a>
+  </div>
+</main>
+<script>
+window.applyLumen = function (cfg) {
+  cfg = cfg || {};
+  var accent = /^#[0-9a-f]{6}$/i.test(cfg.accent) ? cfg.accent : '#7c5cff';
+  document.documentElement.style.setProperty('--accent', accent);
+  document.body.dataset.mode = cfg.mode === 'light' || cfg.mode === 'dark' ? cfg.mode : '';
+  var walls = { none: 1, dusk: 1, aurora: 1, ember: 1, ocean: 1, forest: 1, mesh: 1, grid: 1, custom: 1 };
+  var wall = walls[cfg.wallpaper] ? cfg.wallpaper : 'none';
+  document.body.dataset.wall = wall;
+  if (wall === 'custom' && typeof cfg.image === 'string' && cfg.image.indexOf('data:image/') === 0) {
+    document.body.style.backgroundImage = 'url("' + cfg.image.replace(/["\\\r\n]/g, '') + '")';
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+  } else {
+    document.body.style.backgroundImage = '';
+  }
+  if (cfg.fontScale) document.body.style.fontSize = Math.round(15 * cfg.fontScale / 100) + 'px';
+  if (!cfg.bookmarksMode) return;
+  var grid = document.getElementById('shortcuts');
+  var list = Array.isArray(cfg.bookmarks) ? cfg.bookmarks : [];
+  grid.textContent = '';
+  if (!list.length) {
+    grid.style.display = 'block';
+    var p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = 'Закладок пока нет. Откройте сайт и нажмите звёздочку в адресной строке.';
+    grid.appendChild(p);
+    return;
+  }
+  list.forEach(function (b) {
+    if (!b || !/^https?:\/\//i.test(b.url || '')) return;
+    var a = document.createElement('a');
+    a.href = b.url;
+    var i = document.createElement('i');
+    var title = String(b.title || b.url);
+    i.textContent = title.trim().charAt(0).toUpperCase() || '•';
+    var label = document.createElement('b');
+    label.textContent = title;
+    a.appendChild(i);
+    a.appendChild(label);
+    grid.appendChild(a);
+  });
+};
+</script>
 </body>
 </html>

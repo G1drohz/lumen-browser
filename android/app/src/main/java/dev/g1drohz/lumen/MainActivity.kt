@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
@@ -34,7 +35,9 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
@@ -48,6 +51,7 @@ class MainActivity : AppCompatActivity() {
 
     private class Tab(val web: WebView) {
         var title = "Новая вкладка"
+        var logical = HOME
     }
 
     private val tabs = mutableListOf<Tab>()
@@ -60,22 +64,33 @@ class MainActivity : AppCompatActivity() {
     private var adblock = true
     private var darkPages = false
     private var night = false
-    private val accent = Color.parseColor("#7C5CFF")
+    private val palette get() = Store.palette(this)
+    private val bg get() = palette.bg
+    private val pill get() = palette.pill
+    private val fg get() = palette.fg
+    private val mute get() = palette.mute
+    private val accent get() = palette.accent
 
-    private val bg get() = if (night) 0xFF1C1C20.toInt() else 0xFFF5F5F7.toInt()
-    private val pill get() = if (night) 0xFF34343B.toInt() else 0xFFFFFFFF.toInt()
-    private val fg get() = if (night) 0xFFF2F2F5.toInt() else 0xFF1D1D1F.toInt()
-    private val mute get() = if (night) 0xFF9A9AA5.toInt() else 0xFF6E6E73.toInt()
+    private val wallpaperPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        toast(if (Store.saveWallpaper(this, uri)) "Обои обновлены" else "Нужна картинка до 2.5 МБ")
+        reloadStartPages()
+    }
 
     private val startHtml by lazy { assets.open("start.html").bufferedReader().use { it.readText() } }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun web() = tabs[cur].web
-    private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+    internal fun web() = tabs[cur].web
+    internal fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val desiredNight = Store.nightMode(this)
+        if (AppCompatDelegate.getDefaultNightMode() != desiredNight) {
+            AppCompatDelegate.setDefaultNightMode(desiredNight)
+            return
+        }
+        night = Store.palette(this).mode == "dark"
         prefs = getSharedPreferences("lumen", Context.MODE_PRIVATE)
         adblock = prefs.getBoolean("adblock", true)
         darkPages = prefs.getBoolean("dark", false)
@@ -106,7 +121,17 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !night
         }
 
-        newTab(intent?.dataString ?: HOME)
+        val pending = restoreUrls
+        val pendingIndex = restoreIndex
+        restoreUrls = null
+        when {
+            pending != null && pending.isNotEmpty() -> {
+                pending.forEach { newTab(it) }
+                select(pendingIndex.coerceIn(0, tabs.lastIndex))
+            }
+            savedInstanceState == null && !intent?.dataString.isNullOrEmpty() -> newTab(intent.dataString)
+            else -> newTab(Store.launchTarget(this))
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -207,13 +232,7 @@ class MainActivity : AppCompatActivity() {
         return if (isStart(u)) "" else u
     }
 
-    private fun toUrl(input: String): String {
-        val s = input.trim()
-        if (s.isEmpty()) return HOME
-        if (Regex("https?://.*", RegexOption.IGNORE_CASE).matches(s)) return s
-        if (Regex("(localhost|[\\w-]+(\\.[\\w-]+)+)(:\\d+)?([/?#].*)?", RegexOption.IGNORE_CASE).matches(s)) return "https://$s"
-        return "https://duckduckgo.com/?q=" + Uri.encode(s)
-    }
+    private fun toUrl(input: String) = Store.toUrl(input)
 
     private fun go(input: String) {
         load(tabs[cur], toUrl(input))
@@ -225,8 +244,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun load(tab: Tab, url: String) {
-        if (url == HOME) tab.web.loadDataWithBaseURL(START_BASE, startHtml, "text/html", "utf-8", null)
-        else tab.web.loadUrl(url)
+        tab.logical = url
+        when (url) {
+            HOME, HOME_BM -> tab.web.loadDataWithBaseURL(
+                START_BASE,
+                Store.decorateStart(this, startHtml, url == HOME_BM),
+                "text/html",
+                "utf-8",
+                null
+            )
+            else -> tab.web.loadUrl(url)
+        }
     }
 
     // ---------- вкладки ----------
@@ -242,7 +270,10 @@ class MainActivity : AppCompatActivity() {
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
+            textZoom = Store.int(this@MainActivity, "fontScale", 100).coerceIn(80, 160)
         }
+        @Suppress("DEPRECATION")
+        w.setInitialScale(Store.int(this, "pageZoom", 100).coerceIn(50, 200))
 
         w.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
@@ -260,6 +291,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                if (url != null && !isStart(url) && url != "about:blank") tab.logical = url
                 if (view === web()) {
                     showUrl(url)
                     progress.visibility = View.VISIBLE
@@ -268,6 +300,9 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String?) {
                 view.evaluateJavascript(if (darkPages) DARK_JS else LIGHT_JS, null)
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://")) && !isStart(url)) {
+                    view.evaluateJavascript(Store.PW_HOOK, null)
+                }
                 if (view === web()) progress.visibility = View.GONE
             }
         }
@@ -282,6 +317,13 @@ class MainActivity : AppCompatActivity() {
 
             override fun onReceivedTitle(view: WebView, title: String?) {
                 tab.title = title ?: view.url ?: ""
+            }
+
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                val message = consoleMessage.message() ?: return false
+                if (!message.startsWith("LUMEN_PW_SAVE ")) return false
+                offerFromPage(message.removePrefix("LUMEN_PW_SAVE "))
+                return true
             }
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
@@ -300,7 +342,9 @@ class MainActivity : AppCompatActivity() {
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(dlUrl, contentDisposition, mime))
             CookieManager.getInstance().getCookie(dlUrl)?.let { req.addRequestHeader("Cookie", it) }
-            (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
+            val name = URLUtil.guessFileName(dlUrl, contentDisposition, mime)
+            val id = (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
+            Store.rememberDownload(this, id, name, dlUrl)
             toast("Загрузка началась")
         }
 
@@ -352,6 +396,12 @@ class MainActivity : AppCompatActivity() {
             menu.add(0, 6, 0, "Тёмный режим для сайтов").apply { isCheckable = true; isChecked = darkPages }
             menu.add(0, 7, 0, "Поделиться")
             menu.add(0, 8, 0, "Очистить данные")
+            menu.add(0, 9, 0, "Загрузки")
+            menu.add(0, 10, 0, "Пароли")
+            menu.add(0, 11, 0, "Оформление")
+            menu.add(0, 12, 0, "Найти на странице")
+            menu.add(0, 13, 0, "Увеличить")
+            menu.add(0, 14, 0, "Уменьшить")
             setOnMenuItemClickListener { m ->
                 when (m.itemId) {
                     1 -> newTab(HOME)
@@ -370,6 +420,12 @@ class MainActivity : AppCompatActivity() {
                     }
                     7 -> share()
                     8 -> clearData()
+                    9 -> Panels.downloads(this)
+                    10 -> Panels.passwords(this)
+                    11 -> Panels.settings(this)
+                    12 -> Panels.find(this)
+                    13 -> web().zoomBy(1.1f)
+                    14 -> web().zoomBy(0.9f)
                 }
                 true
             }
@@ -428,10 +484,64 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    internal fun launchWallpaperPicker() = wallpaperPicker.launch("image/*")
+
+    internal fun onSettingsChanged(recreateUi: Boolean) {
+        adblock = prefs.getBoolean("adblock", true)
+        darkPages = prefs.getBoolean("dark", false)
+        val font = Store.int(this, "fontScale", 100).coerceIn(80, 160)
+        val zoom = Store.int(this, "pageZoom", 100).coerceIn(50, 200)
+        if (::holder.isInitialized && tabs.isNotEmpty()) {
+            tabs.forEach { t ->
+                t.web.settings.textZoom = font
+                @Suppress("DEPRECATION")
+                t.web.setInitialScale(zoom)
+                t.web.evaluateJavascript(if (darkPages) DARK_JS else LIGHT_JS, null)
+            }
+        }
+        if (!recreateUi) return
+        stashTabs()
+        val desired = Store.nightMode(this)
+        if (AppCompatDelegate.getDefaultNightMode() != desired) AppCompatDelegate.setDefaultNightMode(desired)
+        else recreate()
+    }
+
+    internal fun reloadStartPages() {
+        tabs.forEach { t ->
+            if (t.logical == HOME || t.logical == HOME_BM) load(t, t.logical)
+        }
+    }
+
+    private fun stashTabs() {
+        if (tabs.isEmpty()) return
+        restoreUrls = tabs.map { it.logical }
+        restoreIndex = cur
+    }
+
+    private fun offerFromPage(raw: String) {
+        val o = try { JSONObject(raw) } catch (_: Exception) { return }
+        val origin = Store.validOrigin(o.optString("origin"))
+        val username = o.optString("username").take(200)
+        val password = o.optString("password")
+        if (origin.isEmpty() || password.isEmpty() || password.length > 500) return
+        if (Store.isNever(this, origin) || Store.samePassword(this, origin, username, password)) return
+        val update = Store.passwords(this).let { arr ->
+            (0 until arr.length()).any {
+                val row = arr.getJSONObject(it)
+                row.optString("origin") == origin && row.optString("username") == username
+            }
+        }
+        Panels.offerPassword(this, origin, username, password, update)
+    }
+
     companion object {
         const val HOME = "lumen:start"
+        const val HOME_BM = "lumen:bookmarks"
         const val START_BASE = "https://lumen.start/"
         const val DARK_JS = "(function(){var s=document.getElementById('lumen-dark');if(s)return;s=document.createElement('style');s.id='lumen-dark';s.textContent='html{filter:invert(1) hue-rotate(180deg)!important;background:#fff}img,video,picture,canvas{filter:invert(1) hue-rotate(180deg)!important}';(document.head||document.documentElement).appendChild(s)})()"
         const val LIGHT_JS = "(function(){var s=document.getElementById('lumen-dark');if(s)s.remove()})()"
+
+        private var restoreUrls: List<String>? = null
+        private var restoreIndex = 0
     }
 }

@@ -16,15 +16,28 @@
     </div>
     <form id="omni" autocomplete="off">
       <input id="url" type="text" spellcheck="false" placeholder="Поиск или адрес сайта">
+      <button type="button" id="zoom" hidden title="Сбросить масштаб">100%</button>
+      <button type="button" id="fill" hidden title="Подставить пароль">✱</button>
       <button type="button" id="star" title="В закладки">☆</button>
     </form>
     <div class="nav"><button id="newtab" title="Новая вкладка">+</button></div>
   </div>
   <div id="tabs"></div>
+  <div id="find" hidden>
+    <input id="findq" type="text" spellcheck="false" placeholder="Найти на странице">
+    <span id="findn"></span>
+    <button type="button" id="findprev" title="Назад">‹</button>
+    <button type="button" id="findnext" title="Далее">›</button>
+    <button type="button" id="findclose" title="Закрыть">✕</button>
+  </div>
+  <div id="ask" hidden></div>
 </header>
 <aside id="side">
   <button data-panel="bookmarks" title="Закладки">★</button>
   <button data-panel="history" title="История">◷</button>
+  <button data-panel="downloads" title="Загрузки">↓</button>
+  <button data-panel="passwords" title="Пароли">✱</button>
+  <button data-panel="settings" title="Оформление">☀</button>
   <button data-panel="control" title="Lumen Control">⚡</button>
   <span class="grow"></span>
   <button id="home" title="Главная">⌂</button>
