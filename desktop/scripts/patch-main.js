@@ -11,86 +11,61 @@ if (c.includes('LUMEN_SC ')) {
   process.exit(0);
 }
 
-const DEFAULT_SHORTCUTS = JSON.stringify([
+const DEFAULT_SHORTCUTS = [
   { title: 'YouTube', url: 'https://www.youtube.com' },
   { title: 'GitHub', url: 'https://github.com' },
   { title: 'Wikipedia', url: 'https://wikipedia.org' },
   { title: 'DuckDuckGo', url: 'https://duckduckgo.com' },
-]);
+];
+const DS = JSON.stringify(DEFAULT_SHORTCUTS);
 
-function mustReplace(oldStr, newStr, label) {
-  if (!c.includes(oldStr)) {
-    console.error('patch-main: missing anchor:', label);
+function must(idx, label) {
+  if (idx < 0) {
+    console.error('patch-main: missing:', label);
     process.exit(1);
   }
-  c = c.replace(oldStr, newStr);
+  return idx;
 }
 
-mustReplace(
+function replaceOnce(needle, replacement, label) {
+  const i = c.indexOf(needle);
+  must(i, label);
+  c = c.slice(0, i) + replacement + c.slice(i + needle.length);
+}
+
+// 1) blankData: add shortcuts field
+replaceOnce(
   'passwords: [], downloads: [], pwNever: [], perms: {} }',
-  'passwords: [], downloads: [], pwNever: [], shortcuts: ' + DEFAULT_SHORTCUTS + ', perms: {} }',
+  'passwords: [], downloads: [], pwNever: [], shortcuts: ' + DS + ', perms: {} }',
   'blankData'
 );
 
-mustReplace(
-  `passwords: Array.isArray(d.passwords) ? d.passwords : [],
-      downloads: Array.isArray(d.downloads) ? d.downloads : [],
-      pwNever: Array.isArray(d.pwNever) ? d.pwNever.filter((x) => typeof x === 'string').slice(0, 200) : [],
-      perms: d.perms && typeof d.perms === 'object' && !Array.isArray(d.perms) ? d.perms : {},`,
-  `passwords: Array.isArray(d.passwords) ? d.passwords : [],
-      downloads: Array.isArray(d.downloads) ? d.downloads : [],
-      pwNever: Array.isArray(d.pwNever) ? d.pwNever.filter((x) => typeof x === 'string').slice(0, 200) : [],
-      shortcuts: Array.isArray(d.shortcuts) ? d.shortcuts.filter((s) => s && /^https?:\/\//i.test(s.url || '')).slice(0, 24) : ${DEFAULT_SHORTCUTS},
-      perms: d.perms && typeof d.perms === 'object' && !Array.isArray(d.perms) ? d.perms : {},`,
-  'load shortcuts'
+// 2) load(): restore shortcuts from disk
+replaceOnce(
+  'perms: d.perms && typeof d.perms === \'object\' && !Array.isArray(d.perms) ? d.perms : {},',
+  'shortcuts: Array.isArray(d.shortcuts) ? d.shortcuts.filter((s) => s && /^https?:\\/\\//i.test(s.url || \'\')).slice(0, 24) : ' +
+    DS +
+    ',\n      perms: d.perms && typeof d.perms === \'object\' && !Array.isArray(d.perms) ? d.perms : {},',
+  'load.perms'
 );
 
-mustReplace(
-  `function startConfig(bookmarksMode) {
-  const theme = chromeTheme();
-  const bookmarks = data.bookmarks.slice(0, 24).map((b) => ({
-    title: String(b.title || '').slice(0, 80),
-    url: String(b.url || ''),
-  })).filter((b) => /^https?:\/\//i.test(b.url));
-  return {
-    accent: theme.accent,
-    mode: theme.mode,
-    wallpaper: data.settings.wallpaper,
-    image: data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : '',
-    bookmarksMode: !!bookmarksMode,
-    fontScale: data.settings.fontScale,
-    bookmarks,
-  };
-}`,
-  `function startConfig(bookmarksMode) {
-  const theme = chromeTheme();
-  const bookmarks = data.bookmarks.slice(0, 24).map((b) => ({
-    title: String(b.title || '').slice(0, 80),
-    url: String(b.url || ''),
-  })).filter((b) => /^https?:\/\//i.test(b.url));
-  const shortcuts = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 24).map((b) => ({
-    title: String(b.title || '').slice(0, 80),
-    url: String(b.url || ''),
-  })).filter((b) => /^https?:\/\//i.test(b.url));
-  return {
-    accent: theme.accent,
-    mode: theme.mode,
-    wallpaper: data.settings.wallpaper,
-    image: data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : '',
-    bookmarksMode: !!bookmarksMode,
-    fontScale: data.settings.fontScale,
-    bookmarks,
-    shortcuts,
-    editable: !bookmarksMode,
-  };
-}
-function normalizeShortcut(row) {
+// 3) startConfig: include shortcuts + editable
+replaceOnce(
+  'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n  };',
+  'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n    shortcuts: (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 24).map((b) => ({ title: String(b.title || \'\').slice(0, 80), url: String(b.url || \'\') })).filter((b) => /^https?:\\/\\//i.test(b.url)),\n    editable: !bookmarksMode,\n  };',
+  'startConfig.return'
+);
+
+// 4) helpers after startConfig
+replaceOnce(
+  'function decorateStart(tab) {',
+  `function normalizeShortcut(row) {
   if (!row || typeof row !== 'object') return null;
   let url = String(row.url || '').trim();
   if (!url) return null;
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if (!/^https?:\\/\\//i.test(url)) url = 'https://' + url;
   try { new URL(url); } catch { return null; }
-  const title = String(row.title || url.replace(/^https?:\/\//i, '').split('/')[0]).slice(0, 80);
+  const title = String(row.title || url.replace(/^https?:\\/\\//i, '').split('/')[0]).slice(0, 80);
   return { title, url };
 }
 function applyShortcutOp(payload) {
@@ -104,42 +79,32 @@ function applyShortcutOp(payload) {
     data.shortcuts.push(row);
     if (data.shortcuts.length > 24) data.shortcuts = data.shortcuts.slice(-24);
   } else if (op === 'remove') {
-    const url = String(payload.url || '');
-    data.shortcuts = data.shortcuts.filter((s) => s.url !== url);
+    data.shortcuts = data.shortcuts.filter((s) => s.url !== String(payload.url || ''));
   } else if (op === 'reset') {
-    data.shortcuts = ${DEFAULT_SHORTCUTS};
+    data.shortcuts = ${DS};
   } else return;
   save();
   for (const t of tabs.values()) decorateStart(t).catch(() => {});
-}`,
-  'startConfig'
+}
+function decorateStart(tab) {`,
+  'decorateStart'
 );
 
-mustReplace(
-  `function onPageConsole(tab, args) {
-  const message = consoleText(args);
-  if (!message.startsWith('LUMEN_PW_SAVE ')) return;
-  let payload;
-  try { payload = JSON.parse(message.slice('LUMEN_PW_SAVE '.length)); } catch { return; }
-  offerPassword(payload);
-}`,
-  `function onPageConsole(tab, args) {
-  const message = consoleText(args);
-  if (message.startsWith('LUMEN_SC ')) {
-    let payload;
-    try { payload = JSON.parse(message.slice('LUMEN_SC '.length)); } catch { return; }
-    applyShortcutOp(payload);
+// 5) console handler: LUMEN_SC
+replaceOnce(
+  "if (!message.startsWith('LUMEN_PW_SAVE ')) return;",
+  `if (message.startsWith('LUMEN_SC ')) {
+    let sc;
+    try { sc = JSON.parse(message.slice(9)); } catch { return; }
+    applyShortcutOp(sc);
     return;
   }
-  if (!message.startsWith('LUMEN_PW_SAVE ')) return;
-  let payload;
-  try { payload = JSON.parse(message.slice('LUMEN_PW_SAVE '.length)); } catch { return; }
-  offerPassword(payload);
-}`,
+  if (!message.startsWith('LUMEN_PW_SAVE ')) return;`,
   'onPageConsole'
 );
 
-mustReplace(
+// 6) IPC
+replaceOnce(
   "handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));",
   `handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));
 handle('sc:list', () => (Array.isArray(data.shortcuts) ? data.shortcuts : []));
@@ -149,8 +114,13 @@ handle('sc:set', (list) => {
   for (const t of tabs.values()) decorateStart(t).catch(() => {});
   return data.shortcuts;
 });`,
-  'sc handlers'
+  'sc.ipc'
 );
 
 fs.writeFileSync(file, c);
-console.log('patch-main: shortcuts injected, size', c.length);
+try {
+  require('vm').runInNewContext(c, { require, module: { exports: {} }, exports: {}, console, process, Buffer, __dirname: path.dirname(file), __filename: file }, { timeout: 1 });
+} catch (e) {
+  // syntax is checked separately with node --check
+}
+console.log('patch-main: ok, size', c.length);
