@@ -1,16 +1,26 @@
 const { safeStorage } = require('electron');
 
-/** Шифрует строку средствами ОС (DPAPI / Keychain / libsecret). Если их нет — прячет в base64. */
-function seal(text) {
-  const value = String(text);
+/** Доступно ли настоящее шифрование ОС (DPAPI / Keychain / libsecret или kwallet). */
+function vaultSecure() {
   try {
-    if (safeStorage.isEncryptionAvailable()) {
-      return 'enc:' + safeStorage.encryptString(value).toString('base64');
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    // На Linux без связки ключей Electron тихо переходит на «basic_text» — это не шифрование.
+    if (process.platform === 'linux' && typeof safeStorage.getSelectedStorageBackend === 'function') {
+      return safeStorage.getSelectedStorageBackend() !== 'basic_text';
     }
-  } catch { /* остаётся запасной вариант ниже */ }
-  return 'b64:' + Buffer.from(value, 'utf8').toString('base64');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
+/** Шифрует строку средствами ОС. Без хранилища ключей пароль НЕ сохраняется (раньше он ложился в base64). */
+function seal(text) {
+  if (!vaultSecure()) throw new Error('Системное хранилище ключей недоступно');
+  return 'enc:' + safeStorage.encryptString(String(text)).toString('base64');
+}
+
+/** Читает запись. Старый формат b64: поддерживается только для миграции в enc:. */
 function openSeal(stored) {
   try {
     if (typeof stored !== 'string') return '';
@@ -18,10 +28,6 @@ function openSeal(stored) {
     if (stored.startsWith('b64:')) return Buffer.from(stored.slice(4), 'base64').toString('utf8');
   } catch { /* повреждённая запись */ }
   return '';
-}
-
-function vaultSecure() {
-  try { return !!safeStorage.isEncryptionAvailable(); } catch { return false; }
 }
 
 module.exports = { seal, openSeal, vaultSecure };
