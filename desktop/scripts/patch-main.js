@@ -6,7 +6,7 @@ const path = require('path');
 const file = path.join(__dirname, '..', 'main.js');
 let c = fs.readFileSync(file, 'utf8');
 
-if (c.includes('LUMEN_SC ')) {
+if (c.includes('LUMEN_SC ') && c.includes('30 * 1024 * 1024')) {
   console.log('patch-main: already patched');
   process.exit(0);
 }
@@ -33,33 +33,30 @@ function replaceOnce(needle, replacement, label) {
   c = c.slice(0, i) + replacement + c.slice(i + needle.length);
 }
 
-// 1) blankData: add shortcuts field
-replaceOnce(
-  'passwords: [], downloads: [], pwNever: [], perms: {} }',
-  'passwords: [], downloads: [], pwNever: [], shortcuts: ' + DS + ', perms: {} }',
-  'blankData'
-);
+if (!c.includes('LUMEN_SC ')) {
+  replaceOnce(
+    'passwords: [], downloads: [], pwNever: [], perms: {} }',
+    'passwords: [], downloads: [], pwNever: [], shortcuts: ' + DS + ', perms: {} }',
+    'blankData'
+  );
 
-// 2) load(): restore shortcuts from disk
-replaceOnce(
-  'perms: d.perms && typeof d.perms === \'object\' && !Array.isArray(d.perms) ? d.perms : {},',
-  'shortcuts: Array.isArray(d.shortcuts) ? d.shortcuts.filter((s) => s && /^https?:\\/\\//i.test(s.url || \'\')).slice(0, 24) : ' +
-    DS +
-    ',\n      perms: d.perms && typeof d.perms === \'object\' && !Array.isArray(d.perms) ? d.perms : {},',
-  'load.perms'
-);
+  replaceOnce(
+    "perms: d.perms && typeof d.perms === 'object' && !Array.isArray(d.perms) ? d.perms : {},",
+    'shortcuts: Array.isArray(d.shortcuts) ? d.shortcuts.filter((s) => s && /^https?:\\/\\//i.test(s.url || \'\')).slice(0, 24) : ' +
+      DS +
+      ',\n      perms: d.perms && typeof d.perms === \'object\' && !Array.isArray(d.perms) ? d.perms : {},',
+    'load.perms'
+  );
 
-// 3) startConfig: include shortcuts + editable
-replaceOnce(
-  'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n  };',
-  'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n    shortcuts: (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 24).map((b) => ({ title: String(b.title || \'\').slice(0, 80), url: String(b.url || \'\') })).filter((b) => /^https?:\\/\\//i.test(b.url)),\n    editable: !bookmarksMode,\n  };',
-  'startConfig.return'
-);
+  replaceOnce(
+    'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n  };',
+    'bookmarksMode: !!bookmarksMode,\n    fontScale: data.settings.fontScale,\n    bookmarks,\n    shortcuts: (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 24).map((b) => ({ title: String(b.title || \'\').slice(0, 80), url: String(b.url || \'\') })).filter((b) => /^https?:\\/\\//i.test(b.url)),\n    editable: !bookmarksMode,\n  };',
+    'startConfig.return'
+  );
 
-// 4) helpers after startConfig
-replaceOnce(
-  'function decorateStart(tab) {',
-  `function normalizeShortcut(row) {
+  replaceOnce(
+    'function decorateStart(tab) {',
+    `function normalizeShortcut(row) {
   if (!row || typeof row !== 'object') return null;
   let url = String(row.url || '').trim();
   if (!url) return null;
@@ -87,26 +84,24 @@ function applyShortcutOp(payload) {
   for (const t of tabs.values()) decorateStart(t).catch(() => {});
 }
 function decorateStart(tab) {`,
-  'decorateStart'
-);
+    'decorateStart'
+  );
 
-// 5) console handler: LUMEN_SC
-replaceOnce(
-  "if (!message.startsWith('LUMEN_PW_SAVE ')) return;",
-  `if (message.startsWith('LUMEN_SC ')) {
+  replaceOnce(
+    "if (!message.startsWith('LUMEN_PW_SAVE ')) return;",
+    `if (message.startsWith('LUMEN_SC ')) {
     let sc;
     try { sc = JSON.parse(message.slice(9)); } catch { return; }
     applyShortcutOp(sc);
     return;
   }
   if (!message.startsWith('LUMEN_PW_SAVE ')) return;`,
-  'onPageConsole'
-);
+    'onPageConsole'
+  );
 
-// 6) IPC
-replaceOnce(
-  "handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));",
-  `handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));
+  replaceOnce(
+    "handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));",
+    `handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));
 handle('sc:list', () => (Array.isArray(data.shortcuts) ? data.shortcuts : []));
 handle('sc:set', (list) => {
   data.shortcuts = (Array.isArray(list) ? list : []).map(normalizeShortcut).filter(Boolean).slice(0, 24);
@@ -114,13 +109,12 @@ handle('sc:set', (list) => {
   for (const t of tabs.values()) decorateStart(t).catch(() => {});
   return data.shortcuts;
 });`,
-  'sc.ipc'
-);
+    'sc.ipc'
+  );
+}
+
+// wallpaper size limit 6MB -> 30MB
+c = c.split('6 * 1024 * 1024').join('30 * 1024 * 1024');
 
 fs.writeFileSync(file, c);
-try {
-  require('vm').runInNewContext(c, { require, module: { exports: {} }, exports: {}, console, process, Buffer, __dirname: path.dirname(file), __filename: file }, { timeout: 1 });
-} catch (e) {
-  // syntax is checked separately with node --check
-}
 console.log('patch-main: ok, size', c.length);
