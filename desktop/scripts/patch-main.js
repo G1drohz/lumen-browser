@@ -1,15 +1,10 @@
 #!/usr/bin/env node
 'use strict';
-/** Inject express-panel (shortcuts) support into baked main.js */
+/** Inject express-panel + Chrome identity (Google login) into baked main.js */
 const fs = require('fs');
 const path = require('path');
 const file = path.join(__dirname, '..', 'main.js');
 let c = fs.readFileSync(file, 'utf8');
-
-if (c.includes('LUMEN_SC ') && c.includes('30 * 1024 * 1024')) {
-  console.log('patch-main: already patched');
-  process.exit(0);
-}
 
 const DEFAULT_SHORTCUTS = [
   { title: 'YouTube', url: 'https://www.youtube.com' },
@@ -33,6 +28,7 @@ function replaceOnce(needle, replacement, label) {
   c = c.slice(0, i) + replacement + c.slice(i + needle.length);
 }
 
+// --- express panel / shortcuts ---
 if (!c.includes('LUMEN_SC ')) {
   replaceOnce(
     'passwords: [], downloads: [], pwNever: [], perms: {} }',
@@ -114,7 +110,69 @@ handle('sc:set', (list) => {
 }
 
 // wallpaper size limit 6MB -> 30MB
-c = c.split('6 * 1024 * 1024').join('30 * 1024 * 1024');
+if (c.includes('6 * 1024 * 1024')) {
+  c = c.split('6 * 1024 * 1024').join('30 * 1024 * 1024');
+}
+
+// --- look like real Chrome so Google accepts sign-in ---
+if (!c.includes('function setupChromeIdentity')) {
+  const UA_OLD =
+    "ses.setUserAgent(app.userAgentFallback.replace(/\\s(Electron|Lumen|lumen-desktop)\\/\\S+/gi, ''));";
+  const UA_NEW = 'setupChromeIdentity(ses);';
+  if (c.includes(UA_OLD)) {
+    replaceOnce(UA_OLD, UA_NEW, 'setUserAgent');
+  } else if (c.includes('setupChromeIdentity(ses)')) {
+    // already swapped
+  } else {
+    console.error('patch-main: setUserAgent anchor missing');
+    process.exit(1);
+  }
+
+  replaceOnce(
+    'app.whenReady().then(() => {',
+    `function lumenChromeUA() {
+  const chrome = String(process.versions.chrome || '131.0.0.0');
+  const major = chrome.split('.')[0] || '131';
+  const platform =
+    process.platform === 'darwin'
+      ? 'Macintosh; Intel Mac OS X 10_15_7'
+      : process.platform === 'linux'
+        ? 'X11; Linux x86_64'
+        : 'Windows NT 10.0; Win64; x64';
+  const osToken =
+    process.platform === 'darwin' ? 'macOS' : process.platform === 'linux' ? 'Linux' : 'Windows';
+  return {
+    ua:
+      'Mozilla/5.0 (' +
+      platform +
+      ') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' +
+      chrome +
+      ' Safari/537.36',
+    major,
+    osToken,
+  };
+}
+function setupChromeIdentity(ses) {
+  const { ua, major, osToken } = lumenChromeUA();
+  try { app.userAgentFallback = ua; } catch (_) {}
+  ses.setUserAgent(ua);
+  const brands =
+    '"Google Chrome";v="' + major + '", "Chromium";v="' + major + '", "Not.A/Brand";v="99"';
+  try {
+    ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      const h = Object.assign({}, details.requestHeaders || {});
+      h['User-Agent'] = ua;
+      h['sec-ch-ua'] = brands;
+      h['sec-ch-ua-mobile'] = '?0';
+      h['sec-ch-ua-platform'] = '"' + osToken + '"';
+      callback({ cancel: false, requestHeaders: h });
+    });
+  } catch (_) {}
+}
+app.whenReady().then(() => {`,
+    'chromeIdentity'
+  );
+}
 
 fs.writeFileSync(file, c);
 console.log('patch-main: ok, size', c.length);
