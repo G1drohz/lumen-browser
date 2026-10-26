@@ -1,8 +1,8 @@
 {
   "name": "lumen-desktop",
   "productName": "Lumen",
-  "version": "3.0.3",
-  "description": "Lumen — Chromium-браузер: интерфейс Safari, функции Opera GX",
+  "version": "3.0.4",
+  "description": "Lumen — Chromium-браузер с живым интерфейсом",
   "author": "G1drohz",
   "main": "main.js",
   "scripts": {
