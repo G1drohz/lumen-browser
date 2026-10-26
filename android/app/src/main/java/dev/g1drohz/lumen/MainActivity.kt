@@ -77,19 +77,25 @@ class MainActivity : AppCompatActivity() {
         reloadStartPages()
     }
 
-    private val startHtml by lazy { assets.open("start.html").bufferedReader().use { it.readText() } }
+    private val startHtml by lazy {
+        try {
+            assets.open("start.html").bufferedReader().use { it.readText() }
+        } catch (_: Exception) {
+            FALLBACK_START
+        }
+    }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     internal fun web() = tabs[cur].web
     internal fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // Apply night mode BEFORE super so UI is never left blank (early return caused gray screen)
         val desiredNight = Store.nightMode(this)
         if (AppCompatDelegate.getDefaultNightMode() != desiredNight) {
             AppCompatDelegate.setDefaultNightMode(desiredNight)
-            return
         }
+        super.onCreate(savedInstanceState)
         night = Store.palette(this).mode == "dark"
         prefs = getSharedPreferences("lumen", Context.MODE_PRIVATE)
         adblock = prefs.getBoolean("adblock", true)
@@ -120,16 +126,21 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !night
         }
 
-        val pending = restoreUrls
-        val pendingIndex = restoreIndex
-        restoreUrls = null
-        when {
-            pending != null && pending.isNotEmpty() -> {
-                pending.forEach { newTab(it) }
-                select(pendingIndex.coerceIn(0, tabs.lastIndex))
+        try {
+            val pending = restoreUrls
+            val pendingIndex = restoreIndex
+            restoreUrls = null
+            when {
+                pending != null && pending.isNotEmpty() -> {
+                    pending.forEach { newTab(it) }
+                    select(pendingIndex.coerceIn(0, tabs.lastIndex))
+                }
+                savedInstanceState == null && !intent?.dataString.isNullOrEmpty() -> newTab(intent.dataString)
+                else -> newTab(Store.launchTarget(this))
             }
-            savedInstanceState == null && !intent?.dataString.isNullOrEmpty() -> newTab(intent.dataString)
-            else -> newTab(Store.launchTarget(this))
+        } catch (e: Exception) {
+            if (tabs.isEmpty()) newTab(HOME)
+            toast("Ошибка загрузки: " + (e.message ?: "unknown"))
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -257,15 +268,20 @@ class MainActivity : AppCompatActivity() {
     private fun newTab(url: String?): Tab {
         val w = WebView(this)
         val tab = Tab(w)
+        w.setBackgroundColor(bg)
+        CookieManager.getInstance().setAcceptCookie(true)
+        CookieManager.getInstance().setAcceptThirdPartyCookies(w, true)
         w.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            databaseEnabled = true
             allowFileAccess = false
             allowContentAccess = false
             setSupportMultipleWindows(true)
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
+            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             textZoom = Store.int(this@MainActivity, "fontScale", 100).coerceIn(80, 160)
         }
         @Suppress("DEPRECATION")
@@ -535,6 +551,7 @@ class MainActivity : AppCompatActivity() {
         const val START_BASE = "https://lumen.start/"
         const val DARK_JS = "(function(){var s=document.getElementById('lumen-dark');if(s)return;s=document.createElement('style');s.id='lumen-dark';s.textContent='html{filter:invert(1) hue-rotate(180deg)!important;background:#fff}img,video,picture,canvas{filter:invert(1) hue-rotate(180deg)!important}';(document.head||document.documentElement).appendChild(s)})()"
         const val LIGHT_JS = "(function(){var s=document.getElementById('lumen-dark');if(s)s.remove()})()"
+        private const val FALLBACK_START = """<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px system-ui;background:#121218;color:#eee}form{width:90%;max-width:420px}input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #333;background:#1c1c24;color:#eee;font:inherit}</style></head><body><form action="https://duckduckgo.com/" method="get"><input name="q" placeholder="Поиск или адрес" autofocus></form><script>window.applyLumen=function(){}</script></body></html>"""
 
         private var restoreUrls: List<String>? = null
         private var restoreIndex = 0
