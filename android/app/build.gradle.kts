@@ -11,8 +11,8 @@ android {
         applicationId = "dev.g1drohz.lumen"
         minSdk = 29
         targetSdk = 34
-        versionCode = 30
-        versionName = "3.0.0"
+        versionCode = 31
+        versionName = "3.1.1"
     }
 
     buildTypes {
