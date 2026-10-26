@@ -20,12 +20,22 @@ button:disabled{opacity:.35;cursor:default;background:none}
 #star,#zoom,#fill{height:calc(24px * var(--ui));min-width:24px;padding:0 4px;font-size:12px;flex:none}
 #star.on,#fill.on{color:var(--accent)}
 #zoom{color:var(--accent);font-weight:600}
-/* Safari-style tabs + compact new-tab cube */
-#tabs-row{height:calc(34px * var(--ui));display:flex;align-items:flex-end;gap:0;padding:4px 8px 0;overflow:hidden}
-#tabs{flex:1;min-width:0;display:flex;gap:1px;overflow:hidden;align-items:flex-end}
+/* tabs strip: + sits right after last tab, slides right as tabs open */
+#tabs-row{
+  height:calc(34px * var(--ui));
+  display:flex;align-items:flex-end;justify-content:flex-start;
+  gap:2px;padding:4px 8px 0;overflow:hidden
+}
+#tabs{
+  flex:0 1 auto;
+  max-width:calc(100% - 36px);
+  min-width:0;
+  display:flex;gap:1px;overflow:hidden;align-items:flex-end
+}
 #newtab{
-  flex:none;width:calc(28px * var(--ui));height:calc(28px * var(--ui));
-  margin:0 4px 3px;align-self:center;
+  flex:none;
+  width:calc(28px * var(--ui));height:calc(28px * var(--ui));
+  margin:0 0 3px 2px;
   font-size:calc(18px * var(--ui));line-height:1;font-weight:400;
   border-radius:8px;color:var(--mute);
   background:color-mix(in srgb,var(--fg) 6%,transparent);
