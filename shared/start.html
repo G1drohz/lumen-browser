@@ -23,153 +23,109 @@ body[data-mode="light"]{
   color:var(--fg);color-scheme:light;background:#f0f0f3;
 }
 body[data-mode="dark"]{color-scheme:dark}
-
-/* soft wallpaper layers (no neon flood) */
-#bg{
-  position:fixed;inset:0;z-index:0;
-  background:#121218 center/cover no-repeat;
-}
+#bg{position:fixed;inset:0;z-index:0;background:#121218 center/cover no-repeat}
 body[data-mode="light"] #bg{background-color:#f0f0f3}
-#bg::after{
-  content:"";position:absolute;inset:0;
-  background:rgba(10,10,16,.42);
-}
+#bg::after{content:"";position:absolute;inset:0;background:rgba(10,10,16,.42)}
 body[data-mode="light"] #bg::after{background:rgba(255,255,255,.35)}
 body[data-wall="none"] #bg::after{background:transparent}
-
-body[data-wall="dusk"] #bg{
-  background-image:radial-gradient(800px 480px at 20% 0%, #3a2a6a88, transparent 60%),
-    radial-gradient(600px 400px at 100% 100%, #2a183888, transparent 55%);
-  background-color:#16141f;
-}
-body[data-wall="aurora"] #bg{
-  background-image:radial-gradient(700px 450px at 15% 30%, #1a5c4a55, transparent 60%),
-    radial-gradient(600px 400px at 90% 20%, #3a2a6a44, transparent 55%);
-  background-color:#0e1614;
-}
-body[data-wall="ember"] #bg{
-  background-image:radial-gradient(700px 420px at 30% 100%, #6a301888, transparent 55%),
-    radial-gradient(500px 360px at 100% 0%, #5a3a1844, transparent 50%);
-  background-color:#18120e;
-}
-body[data-wall="ocean"] #bg{
-  background-image:radial-gradient(800px 480px at 50% 100%, #1a406888, transparent 55%),
-    radial-gradient(500px 360px at 0% 0%, #1a385544, transparent 50%);
-  background-color:#0c141c;
-}
-body[data-wall="forest"] #bg{
-  background-image:radial-gradient(650px 420px at 0% 100%, #1a4a3088, transparent 55%),
-    radial-gradient(500px 360px at 100% 0%, #2a4a1844, transparent 50%);
-  background-color:#0e1610;
-}
-body[data-wall="mesh"] #bg{
-  background-image:radial-gradient(420px 420px at 25% 30%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),
-    radial-gradient(380px 380px at 80% 25%, #5a3a6a33, transparent 70%);
-  background-color:#141418;
-}
-body[data-wall="grid"] #bg{
-  background-color:#141418;
-  background-image:
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size:28px 28px,28px 28px;
-}
+body[data-wall="dusk"] #bg{background-image:radial-gradient(800px 480px at 20% 0%, #3a2a6a88, transparent 60%),radial-gradient(600px 400px at 100% 100%, #2a183888, transparent 55%);background-color:#16141f}
+body[data-wall="aurora"] #bg{background-image:radial-gradient(700px 450px at 15% 30%, #1a5c4a55, transparent 60%),radial-gradient(600px 400px at 90% 20%, #3a2a6a44, transparent 55%);background-color:#0e1614}
+body[data-wall="ember"] #bg{background-image:radial-gradient(700px 420px at 30% 100%, #6a301888, transparent 55%),radial-gradient(500px 360px at 100% 0%, #5a3a1844, transparent 50%);background-color:#18120e}
+body[data-wall="ocean"] #bg{background-image:radial-gradient(800px 480px at 50% 100%, #1a406888, transparent 55%),radial-gradient(500px 360px at 0% 0%, #1a385544, transparent 50%);background-color:#0c141c}
+body[data-wall="forest"] #bg{background-image:radial-gradient(650px 420px at 0% 100%, #1a4a3088, transparent 55%),radial-gradient(500px 360px at 100% 0%, #2a4a1844, transparent 50%);background-color:#0e1610}
+body[data-wall="mesh"] #bg{background-image:radial-gradient(420px 420px at 25% 30%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),radial-gradient(380px 380px at 80% 25%, #5a3a6a33, transparent 70%);background-color:#141418}
+body[data-wall="grid"] #bg{background-color:#141418;background-image:linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);background-size:28px 28px,28px 28px}
 body[data-wall="custom"] #bg::after{background:rgba(10,10,16,.28)}
 body[data-mode="light"][data-wall="custom"] #bg::after{background:rgba(255,255,255,.2)}
-
-main{
-  position:relative;z-index:1;width:min(640px,94vw);
-  display:flex;flex-direction:column;align-items:center;gap:28px;padding:56px 0 48px;
+main{position:relative;z-index:1;width:min(640px,94vw);display:flex;flex-direction:column;align-items:center;gap:28px;padding:56px 0 48px}
+form.search{width:min(480px,100%)}
+form.search input{
+  width:100%;padding:14px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(24,24,32,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  color:inherit;font:inherit;outline:0;box-shadow:0 4px 20px rgba(0,0,0,.18);
 }
-
-form{width:min(480px,100%)}
-input{
-  width:100%;padding:14px 18px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(24,24,32,.72);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  color:inherit;font:inherit;outline:0;
-  box-shadow:0 4px 20px rgba(0,0,0,.18);
-  transition:border-color .15s, box-shadow .15s;
-}
-body[data-mode="light"] input{
-  background:rgba(255,255,255,.82);
-  border-color:rgba(0,0,0,.1);
-  box-shadow:0 4px 16px rgba(0,0,0,.06);
-}
-input:focus{
-  border-color:color-mix(in srgb, var(--accent) 70%, transparent);
-  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-input::placeholder{color:var(--muted)}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));
-  gap:18px 14px;
-  width:min(480px,100%);
-}
+body[data-mode="light"] form.search input{background:rgba(255,255,255,.82);border-color:rgba(0,0,0,.1);box-shadow:0 4px 16px rgba(0,0,0,.06)}
+form.search input:focus{border-color:color-mix(in srgb, var(--accent) 70%, transparent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent)}
+form.search input::placeholder{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:18px 14px;width:min(480px,100%)}
 .tile{position:relative}
-a.site,a.sc-add{
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  color:inherit;text-decoration:none;font-size:12px;font-weight:500;min-width:0;
-}
-a.site b,a.sc-add b{
-  max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  text-align:center;color:var(--muted);
-}
+a.site,a.sc-add{display:flex;flex-direction:column;align-items:center;gap:8px;color:inherit;text-decoration:none;font-size:12px;font-weight:500;min-width:0}
+a.site b,a.sc-add b{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;color:var(--muted)}
 .icon{
   width:64px;height:64px;border-radius:16px;display:grid;place-items:center;
   font-size:22px;font-weight:600;color:#fff;
   background:color-mix(in srgb, var(--accent) 85%, #1a1a24);
-  box-shadow:0 6px 16px rgba(0,0,0,.28);
-  transition:transform .18s ease, box-shadow .18s ease;
-  overflow:hidden;
+  box-shadow:0 6px 16px rgba(0,0,0,.28);transition:transform .18s ease, box-shadow .18s ease;overflow:hidden;
 }
 .icon img{width:30px;height:30px;border-radius:6px;object-fit:contain}
-a.site:hover .icon{
-  transform:translateY(-3px);
-  box-shadow:0 10px 22px rgba(0,0,0,.35);
-}
+a.site:hover .icon{transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,.35)}
 a.site:hover b{color:var(--fg)}
 .tile .rm{
   position:absolute;top:-4px;right:4px;width:20px;height:20px;border-radius:50%;border:0;
-  background:rgba(20,20,28,.88);color:#fff;font:11px/20px system-ui;
-  cursor:pointer;opacity:0;z-index:2;transition:opacity .12s;
+  background:rgba(20,20,28,.88);color:#fff;font:11px/20px system-ui;cursor:pointer;opacity:0;z-index:2;transition:opacity .12s;
 }
-.tile:hover .rm{opacity:1}
-.tile .rm:hover{background:#c33}
-
+.tile:hover .rm{opacity:1}.tile .rm:hover{background:#c33}
 a.sc-add .icon{
-  background:rgba(255,255,255,.06);
-  color:var(--muted);
-  border:1.5px dashed rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);color:var(--muted);border:1.5px dashed rgba(255,255,255,.2);
   box-shadow:none;font-size:28px;font-weight:300;
 }
-body[data-mode="light"] a.sc-add .icon{
-  background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.15);
-}
+body[data-mode="light"] a.sc-add .icon{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.15)}
 a.sc-add:hover .icon{
-  border-color:var(--accent);
-  color:var(--accent);
-  background:color-mix(in srgb, var(--accent) 12%, transparent);
-  transform:translateY(-3px);
+  border-color:var(--accent);color:var(--accent);
+  background:color-mix(in srgb, var(--accent) 12%, transparent);transform:translateY(-3px);
 }
 .note{margin:0;color:var(--muted);text-align:center;font-size:13px}
-@media (max-width:480px){
-  .grid{grid-template-columns:repeat(3,1fr)}
-  .icon{width:56px;height:56px;border-radius:14px}
+/* modal — Electron has no window.prompt */
+#modal{
+  position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
 }
+#modal.open{display:flex}
+#modal .box{
+  width:min(360px,90vw);padding:20px;border-radius:16px;
+  background:#1c1c24;border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 16px 48px rgba(0,0,0,.4);
+}
+body[data-mode="light"] #modal .box{background:#fff;border-color:rgba(0,0,0,.08)}
+#modal h3{margin:0 0 14px;font-size:16px;font-weight:600}
+#modal label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+#modal input{
+  width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);color:inherit;font:inherit;outline:0;
+}
+body[data-mode="light"] #modal input{background:#f5f5f7;border-color:rgba(0,0,0,.1)}
+#modal input:focus{border-color:var(--accent)}
+#modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#modal button{
+  padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+  background:transparent;color:inherit;font:inherit;cursor:pointer;
+}
+#modal button.ok{background:var(--accent);border-color:transparent;color:#fff}
+#modal button:hover{filter:brightness(1.08)}
+@media (max-width:480px){.grid{grid-template-columns:repeat(3,1fr)}.icon{width:56px;height:56px;border-radius:14px}}
 </style>
 </head>
 <body>
 <div id="bg"></div>
 <main>
-  <form action="https://duckduckgo.com/" method="get">
+  <form class="search" action="https://duckduckgo.com/" method="get">
     <input name="q" placeholder="Поиск или адрес" autocomplete="off">
   </form>
   <div class="grid" id="shortcuts"></div>
 </main>
+<div id="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h3>Добавить на панель</h3>
+    <label for="m-url">Адрес</label>
+    <input id="m-url" type="text" placeholder="https://example.com" autocomplete="off">
+    <label for="m-title">Название</label>
+    <input id="m-title" type="text" placeholder="Example" autocomplete="off">
+    <div class="actions">
+      <button type="button" id="m-cancel">Отмена</button>
+      <button type="button" class="ok" id="m-ok">Добавить</button>
+    </div>
+  </div>
+</div>
 <script>
 function sendSc(payload) {
   try { console.log('LUMEN_SC ' + JSON.stringify(payload)); } catch (e) {}
@@ -215,20 +171,46 @@ function tile(b, editable) {
   }
   return wrap;
 }
-function doAdd() {
-  var url = prompt('Адрес сайта', 'https://');
-  if (!url) return;
-  url = url.trim();
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-  var title = prompt('Название', url.replace(/^https?:\/\//i, '').split('/')[0]) || url;
-  sendSc({ op: 'add', url: url, title: title });
+function openModal() {
+  var m = document.getElementById('modal');
+  var url = document.getElementById('m-url');
+  var title = document.getElementById('m-title');
+  url.value = 'https://';
+  title.value = '';
+  m.classList.add('open');
+  setTimeout(function () { url.focus(); url.select(); }, 30);
 }
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+function submitModal() {
+  var url = document.getElementById('m-url').value.trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  var title = document.getElementById('m-title').value.trim();
+  if (!title) {
+    try { title = new URL(url).hostname.replace(/^www\./, ''); }
+    catch (e) { title = url; }
+  }
+  sendSc({ op: 'add', url: url, title: title });
+  closeModal();
+}
+document.getElementById('m-cancel').onclick = closeModal;
+document.getElementById('m-ok').onclick = submitModal;
+document.getElementById('modal').addEventListener('click', function (e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (!document.getElementById('modal').classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter') { e.preventDefault(); submitModal(); }
+});
 function addTile() {
   var wrap = document.createElement('div');
   wrap.className = 'tile';
   var a = document.createElement('a');
   a.href = '#'; a.className = 'sc-add';
-  a.addEventListener('click', function (ev) { ev.preventDefault(); doAdd(); });
+  a.addEventListener('click', function (ev) { ev.preventDefault(); openModal(); });
   var icon = document.createElement('div');
   icon.className = 'icon'; icon.textContent = '+';
   var label = document.createElement('b');
@@ -245,7 +227,6 @@ window.applyLumen = function (cfg) {
   var walls = { none:1,dusk:1,aurora:1,ember:1,ocean:1,forest:1,mesh:1,grid:1,custom:1 };
   var wall = walls[cfg.wallpaper] ? cfg.wallpaper : 'none';
   document.body.dataset.wall = wall;
-
   var bg = document.getElementById('bg');
   if (wall === 'custom' && typeof cfg.image === 'string' && cfg.image.indexOf('data:image/') === 0) {
     bg.style.backgroundImage = 'url("' + cfg.image.replace(/["\\\r\n]/g, '') + '")';
@@ -258,12 +239,9 @@ window.applyLumen = function (cfg) {
     bg.style.backgroundPosition = '';
     bg.style.backgroundColor = '';
   }
-
   if (cfg.fontScale) document.body.style.fontSize = Math.round(15 * cfg.fontScale / 100) + 'px';
-
   var grid = document.getElementById('shortcuts');
   grid.textContent = '';
-
   if (cfg.bookmarksMode) {
     var list = Array.isArray(cfg.bookmarks) ? cfg.bookmarks : [];
     if (!list.length) {
@@ -277,7 +255,6 @@ window.applyLumen = function (cfg) {
     });
     return;
   }
-
   var shortcuts = Array.isArray(cfg.shortcuts) ? cfg.shortcuts : [];
   shortcuts.forEach(function (b) {
     if (!b || !/^https?:\/\//i.test(b.url || '')) return;
