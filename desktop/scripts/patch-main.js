@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-/** Inject express-panel + Chrome identity (Google login) into baked main.js */
+/** Inject express-panel + browser identity (Google login) into baked main.js */
 const fs = require('fs');
 const path = require('path');
 const file = path.join(__dirname, '..', 'main.js');
@@ -109,68 +109,102 @@ handle('sc:set', (list) => {
   );
 }
 
-// wallpaper size limit 6MB -> 30MB
 if (c.includes('6 * 1024 * 1024')) {
   c = c.split('6 * 1024 * 1024').join('30 * 1024 * 1024');
 }
 
-// --- look like real Chrome so Google accepts sign-in ---
-if (!c.includes('function setupChromeIdentity')) {
-  const UA_OLD =
-    "ses.setUserAgent(app.userAgentFallback.replace(/\\s(Electron|Lumen|lumen-desktop)\\/\\S+/gi, ''));";
-  const UA_NEW = 'setupChromeIdentity(ses);';
-  if (c.includes(UA_OLD)) {
-    replaceOnce(UA_OLD, UA_NEW, 'setUserAgent');
-  } else if (c.includes('setupChromeIdentity(ses)')) {
-    // already swapped
-  } else {
-    console.error('patch-main: setUserAgent anchor missing');
+/*
+ * Google blocks Electron "Chrome" UAs. Use Firefox-like UA for Google auth
+ * hosts (works in Wexond and other Electron browsers). Elsewhere keep Chrome.
+ */
+if (!c.includes('function setupBrowserIdentity')) {
+  // Remove older chrome-only identity if present (from previous patches)
+  if (c.includes('function setupChromeIdentity')) {
+    // Replace call site first
+    c = c.replace('setupChromeIdentity(ses);', 'setupBrowserIdentity(ses);');
+    // Drop old function block by replacing with new one later via anchor
+  }
+
+  const anchors = [
+    "ses.setUserAgent(app.userAgentFallback.replace(/\\s(Electron|Lumen|lumen-desktop)\\/\\S+/gi, ''));",
+    'setupChromeIdentity(ses);',
+    'setupBrowserIdentity(ses);',
+  ];
+  let swapped = false;
+  for (const a of anchors) {
+    if (c.includes(a) && a !== 'setupBrowserIdentity(ses);') {
+      replaceOnce(a, 'setupBrowserIdentity(ses);', 'ua-call');
+      swapped = true;
+      break;
+    }
+    if (a === 'setupBrowserIdentity(ses);' && c.includes(a)) {
+      swapped = true;
+      break;
+    }
+  }
+  if (!swapped) {
+    console.error('patch-main: UA call anchor missing');
     process.exit(1);
+  }
+
+  // Strip previous chrome identity function if injected
+  if (c.includes('function lumenChromeUA')) {
+    const start = c.indexOf('function lumenChromeUA');
+    const end = c.indexOf('app.whenReady().then(() => {', start);
+    if (start >= 0 && end > start) {
+      c = c.slice(0, start) + c.slice(end);
+    }
   }
 
   replaceOnce(
     'app.whenReady().then(() => {',
-    `function lumenChromeUA() {
+    `function setupBrowserIdentity(ses) {
   const chrome = String(process.versions.chrome || '131.0.0.0');
-  const major = chrome.split('.')[0] || '131';
   const platform =
     process.platform === 'darwin'
       ? 'Macintosh; Intel Mac OS X 10_15_7'
       : process.platform === 'linux'
         ? 'X11; Linux x86_64'
         : 'Windows NT 10.0; Win64; x64';
-  const osToken =
-    process.platform === 'darwin' ? 'macOS' : process.platform === 'linux' ? 'Linux' : 'Windows';
-  return {
-    ua:
-      'Mozilla/5.0 (' +
-      platform +
-      ') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' +
-      chrome +
-      ' Safari/537.36',
-    major,
-    osToken,
-  };
-}
-function setupChromeIdentity(ses) {
-  const { ua, major, osToken } = lumenChromeUA();
-  try { app.userAgentFallback = ua; } catch (_) {}
-  ses.setUserAgent(ua);
-  const brands =
-    '"Google Chrome";v="' + major + '", "Chromium";v="' + major + '", "Not.A/Brand";v="99"';
+  const chromeUA =
+    'Mozilla/5.0 (' +
+    platform +
+    ') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' +
+    chrome +
+    ' Safari/537.36';
+  // Firefox UA — Google account pages accept this more often than Electron-Chrome
+  const firefoxUA =
+    process.platform === 'darwin'
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0'
+      : process.platform === 'linux'
+        ? 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0'
+        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0';
+  try { app.userAgentFallback = chromeUA; } catch (_) {}
+  ses.setUserAgent(chromeUA);
+  const googleHost =
+    /(?:^|\\.)(google\\.com|google\\.[a-z]{2,3}|youtube\\.com|gmail\\.com|googleapis\\.com|gstatic\\.com)(?::|\\/|$)/i;
   try {
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
       const h = Object.assign({}, details.requestHeaders || {});
-      h['User-Agent'] = ua;
-      h['sec-ch-ua'] = brands;
-      h['sec-ch-ua-mobile'] = '?0';
-      h['sec-ch-ua-platform'] = '"' + osToken + '"';
+      let host = '';
+      try { host = new URL(details.url).hostname; } catch (_) {}
+      const isGoogle = googleHost.test(host);
+      h['User-Agent'] = isGoogle ? firefoxUA : chromeUA;
+      if (isGoogle) {
+        delete h['sec-ch-ua'];
+        delete h['sec-ch-ua-mobile'];
+        delete h['sec-ch-ua-platform'];
+        delete h['sec-ch-ua-full-version-list'];
+        delete h['Sec-CH-UA'];
+        delete h['Sec-CH-UA-Mobile'];
+        delete h['Sec-CH-UA-Platform'];
+      }
       callback({ cancel: false, requestHeaders: h });
     });
   } catch (_) {}
 }
 app.whenReady().then(() => {`,
-    'chromeIdentity'
+    'browserIdentity'
   );
 }
 
