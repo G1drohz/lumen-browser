@@ -1,0 +1,17 @@
+name: apply-desktop-fix
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/write_desktop_fix.py
+      - run: |
+          git config user.name "G1dro"
+          git config user.email "berkoaroslav68@gmail.com"
+          git add desktop/main.js desktop/renderer/app.js desktop/package.json
+          git commit -m "fix(desktop): tabs close on first click" || exit 0
+          git push
