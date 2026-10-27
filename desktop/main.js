@@ -344,10 +344,9 @@ function createView(tab, url) {
   wc.on('enter-html-full-screen', () => { htmlFull = true; if (win) win.setFullScreen(true); layout(); });
   wc.on('leave-html-full-screen', () => { htmlFull = false; if (win) win.setFullScreen(false); layout(); });
   wc.on('render-process-gone', (_e, d) => {
-    // страница упала — один-два раза пробуем перезагрузить, а не оставляем пустой экран
-    if (d.reason === 'clean-exit' || tab.crashes >= 2) return;
+    if (tab.closing || !tabs.has(tab.id) || d.reason === 'clean-exit' || tab.crashes >= 2) return;
     tab.crashes += 1;
-    setTimeout(() => { if (!wc.isDestroyed()) wc.reload(); }, 400);
+    setTimeout(() => { if (!tab.closing && tabs.has(tab.id) && !wc.isDestroyed()) wc.reload(); }, 400);
   });
   applyZoom(tab);
   wc.loadURL(url).catch(() => {});
@@ -443,20 +442,29 @@ function activate(id) {
 }
 
 function closeTab(id) {
+  id = Number(id);
   const tab = tabs.get(id);
   if (!tab) return;
-  const last = tab.view && !tab.view.webContents.isDestroyed() ? tab.view.webContents.getURL() : tab.url;
-  if (/^https?:/i.test(last)) {
+  tab.closing = true;
+  const last = tab.view && tab.view.webContents && !tab.view.webContents.isDestroyed()
+    ? tab.view.webContents.getURL()
+    : tab.url;
+  if (/^https?:/i.test(last || '')) {
     closedTabs.push(last);
     if (closedTabs.length > 20) closedTabs.shift();
   }
   if (tab.view) {
     try { win.contentView.removeChildView(tab.view); } catch { /* уже убрана */ }
-    if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
+    try {
+      const wc = tab.view.webContents;
+      if (wc && !wc.isDestroyed()) wc.destroy();
+    } catch { /* already gone */ }
+    tab.view = null;
   }
   tabs.delete(id);
+  if (activeId === id) activeId = null;
   if (tabs.size === 0) return void newTab(launchURL());
-  if (activeId === id) {
+  if (activeId == null || !tabs.has(activeId)) {
     const ids = [...tabs.keys()];
     activate(ids[ids.length - 1]);
   } else {
@@ -862,8 +870,8 @@ const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => (fromUI(e) ? fn(...a)
 
 on('ui:ready', () => { applyTheme(); pushState(); });
 on('tab:new', () => newTab());
-on('tab:activate', (id) => activate(id));
-on('tab:close', (id) => closeTab(id));
+on('tab:activate', (id) => activate(Number(id)));
+on('tab:close', (id) => closeTab(Number(id)));
 on('tab:sleep', (id) => { const t = tabs.get(id); if (t && id !== activeId) sleepTab(t); });
 on('nav:go', (text) => {
   const t = tabs.get(activeId);

@@ -149,7 +149,7 @@ function renderTabs() {
       },
       t.favicon && !t.loading ? h('img', { src: t.favicon, alt: '' }) : h('span', { class: 'dot' }),
       h('span', { class: 't' }, t.title || 'Новая вкладка'),
-      h('button', { class: 'x', title: 'Закрыть', onclick: (e) => { e.stopPropagation(); lumen.close(t.id); } }, '✕'))
+      h('button', { class: 'x', title: 'Закрыть', onmousedown: (e) => { e.preventDefault(); e.stopPropagation(); lumen.close(t.id); }, onclick: (e) => { e.preventDefault(); e.stopPropagation(); } }, '✕'))
     )
   );
 }
