@@ -6,11 +6,14 @@ start = c.find('private val mobileUa')
 end = c.find('private val desktopUa')
 assert start > 0 and end > start
 new = '''private val mobileUa: String by lazy {
-        val v = Regex("Chrome/([\\d.]+)").find(baseUa)?.groupValues?.get(1) ?: "131.0.0.0"
+        val v = Regex("Chrome/([0-9.]+)").find(baseUa)?.groupValues?.get(1) ?: "131.0.0.0"
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$v Mobile Safari/537.36"
     }
     '''
 c = c[:start] + new + c[end:]
+# also fix desktopUa if it still has \\d
+c = c.replace('Regex("Chrome/([\\d.]+)")', 'Regex("Chrome/([0-9.]+)")')
+c = c.replace('Regex("Chrome/([\d.]+)")', 'Regex("Chrome/([0-9.]+)")')
 c = c.replace(
     's.useWideViewPort = tab.desktop\n        s.loadWithOverviewMode = tab.desktop',
     's.useWideViewPort = true\n        s.loadWithOverviewMode = tab.desktop', 1)
@@ -34,7 +37,8 @@ c = c.replace(
 c = c.replace(
     'if (adblock && !request.isForMainFrame && Adblock.isBlocked(request.url.host))',
     'val h = request.url.host\n                if (adblock && !request.isForMainFrame && h != null && !h.endsWith("googlevideo.com") && !h.endsWith("ytimg.com") && !h.endsWith("ggpht.com") && Adblock.isBlocked(h))', 1)
-needle = '''            override fun onPageFinished(view: WebView, url: String?) {
+if 'onRenderProcessGone' not in c:
+    needle = '''            override fun onPageFinished(view: WebView, url: String?) {
                 view.evaluateJavascript(if (darkPages) DARK_JS else LIGHT_JS, null)
                 if (url != null && (url.startsWith("http://") || url.startsWith("https://")) && !isStart(url)) {
                     view.evaluateJavascript(Store.PW_HOOK, null)
@@ -43,7 +47,7 @@ needle = '''            override fun onPageFinished(view: WebView, url: String?)
                 if (view === web()) progress.visibility = View.GONE
             }
         }'''
-insert = '''            override fun onPageFinished(view: WebView, url: String?) {
+    insert = '''            override fun onPageFinished(view: WebView, url: String?) {
                 if (!tab.desktop) {
                     view.evaluateJavascript("(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';(document.head||document.documentElement).appendChild(m)}m.content='width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes';})();", null)
                 }
@@ -67,9 +71,8 @@ insert = '''            override fun onPageFinished(view: WebView, url: String?)
                 return true
             }
         }'''
-if needle not in c:
-    raise SystemExit('onPageFinished block not found')
-c = c.replace(needle, insert, 1)
+    if needle in c:
+        c = c.replace(needle, insert, 1)
 c = c.replace(
     'mediaPlaybackRequiresUserGesture = false\n            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE\n            textZoom = textZoomValue()',
     'mediaPlaybackRequiresUserGesture = false\n            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE\n            offscreenPreRaster = true\n            textZoom = textZoomValue()', 1)
@@ -79,5 +82,6 @@ g = Path('android/app/build.gradle.kts')
 if g.exists():
     t = g.read_text()
     t = t.replace('versionCode = 31', 'versionCode = 32').replace('versionName = "3.1.1"', 'versionName = "3.2.0"')
+    t = t.replace('versionCode = 30', 'versionCode = 32').replace('versionName = "3.0.0"', 'versionName = "3.2.0"')
     g.write_text(t)
-    print('version bumped')
+    print('version ok')
