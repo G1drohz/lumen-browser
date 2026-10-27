@@ -11,8 +11,8 @@ android {
         applicationId = "dev.g1drohz.lumen"
         minSdk = 29
         targetSdk = 34
-        versionCode = 31
-        versionName = "3.1.1"
+        versionCode = 32
+        versionName = "3.2.0"
     }
 
     buildTypes {
@@ -28,7 +28,6 @@ android {
         jvmTarget = "17"
     }
     sourceSets {
-        // Общие файлы (blocklist.txt, start.html) берём из shared/ в корне репозитория
         getByName("main") {
             assets.srcDirs("../../shared")
         }
