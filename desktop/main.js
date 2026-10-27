@@ -419,7 +419,14 @@ function showContextMenu(wc, p) {
     sep();
   } else if (p.selectionText && p.selectionText.trim()) {
     const q = p.selectionText.trim().slice(0, 200);
-    items.push({ role: 'copy' });
+    items.push({
+      label: 'Копировать',
+      accelerator: 'CmdOrCtrl+C',
+      click: () => {
+        try { clipboard.writeText(p.selectionText); } catch (_) {}
+        try { wc.copy(); } catch (_) {}
+      },
+    });
     add('Искать «' + (q.length > 28 ? q.slice(0, 28) + '…' : q) + '»', () => newTab(searchURL(q), false));
     sep();
   }
@@ -1143,13 +1150,54 @@ if (!gotLock) {
     if (u) newTab(u);
   });
 
-  app.whenReady().then(() => {
+  function setupBrowserIdentity(ses) {
+  const chrome = String(process.versions.chrome || '131.0.0.0');
+  const platform =
+    process.platform === 'darwin'
+      ? 'Macintosh; Intel Mac OS X 10_15_7'
+      : process.platform === 'linux'
+        ? 'X11; Linux x86_64'
+        : 'Windows NT 10.0; Win64; x64';
+  const chromeUA =
+    'Mozilla/5.0 (' + platform + ') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' + chrome + ' Safari/537.36';
+  const firefoxUA =
+    process.platform === 'darwin'
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0'
+      : process.platform === 'linux'
+        ? 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0'
+        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0';
+  try { app.userAgentFallback = chromeUA; } catch (_) {}
+  ses.setUserAgent(chromeUA);
+  const googleHost =
+    /(?:^|\.)(google\.com|google\.[a-z]{2,3}|googleapis\.com|gstatic\.com|youtube\.com|gmail\.com|googleusercontent\.com)(?::|\/|$)/i;
+  try {
+    ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      const h = Object.assign({}, details.requestHeaders || {});
+      let host = '';
+      try { host = new URL(details.url).hostname; } catch (_) {}
+      const isGoogle = googleHost.test(host);
+      h['User-Agent'] = isGoogle ? firefoxUA : chromeUA;
+      if (isGoogle) {
+        delete h['sec-ch-ua'];
+        delete h['sec-ch-ua-mobile'];
+        delete h['sec-ch-ua-platform'];
+        delete h['sec-ch-ua-full-version-list'];
+        delete h['sec-ch-ua-arch'];
+        delete h['sec-ch-ua-bitness'];
+        delete h['sec-ch-ua-model'];
+        delete h['sec-ch-ua-platform-version'];
+      }
+      callback({ cancel: false, requestHeaders: h });
+    });
+  } catch (_) {}
+}
+
+app.whenReady().then(() => {
     load();
     migrateVault();
     syncThemeSource();
     const ses = session.fromPartition('persist:lumen');
-    // Честный User-Agent: движок настоящий Chromium, убираем только служебные метки Electron
-    ses.setUserAgent(app.userAgentFallback.replace(/\s(Electron|Lumen|lumen-desktop)\/\S+/gi, ''));
+    setupBrowserIdentity(ses);
     setupPermissions(ses);
     setupDownloads(ses);
     setupAdblock(ses, () => data.settings.adblock);
