@@ -1,5 +1,7 @@
 name: release
 
+# Запуск: вручную (Actions -> release -> Run workflow) или пушем тега v*.
+# Результат: релиз на GitHub с установщиком Windows (.exe) и APK для Android.
 on:
   push:
     tags: ["v*"]
@@ -7,7 +9,7 @@ on:
     inputs:
       tag:
         description: "Тег релиза"
-        default: "v3.0.3"
+        default: "v0.1.0"
 
 permissions:
   contents: write
@@ -20,17 +22,13 @@ jobs:
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Bake full main.js + express panel patch
-        shell: bash
-        run: |
-          curl -fsSL "https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js" -o main.js
-          node scripts/patch-main.js
-          node --check main.js
-          wc -c main.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
+      - name: Smoke test
+        timeout-minutes: 3
+        run: npx electron . --smoke-test
       - run: npm run dist -- --win --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -75,9 +73,6 @@ jobs:
           tag_name: ${{ inputs.tag || github.ref_name }}
           name: Lumen ${{ inputs.tag || github.ref_name }}
           body: |
-            **Windows:** `Lumen-Setup-*.exe`
-            **Android:** `Lumen-android.apk`
-
-            - Экспресс-панель: + / удаление / сброс работают
-            - Компактные плитки + Safari-стиль вкладок
+            **Windows:** скачайте `Lumen-Setup-*.exe` и запустите — всё необходимое уже внутри.
+            **Android:** скачайте `Lumen-android.apk`, разрешите установку из этого источника и откройте файл.
           files: dist/*
