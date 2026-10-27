@@ -1,0 +1,18 @@
+name: apply-google-ua
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/patch_google_ua.py
+      - run: node --check desktop/main.js
+      - run: |
+          git config user.name "G1dro"
+          git config user.email "berkoaroslav68@gmail.com"
+          git add desktop/main.js desktop/package.json
+          git commit -m "fix(desktop): Google sign-in Firefox UA + text copy" || exit 0
+          git push
