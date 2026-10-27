@@ -8,12 +8,93 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Write MainActivity
+      - name: Restore MainActivity from last good + patches
         run: |
+          set -e
+          curl -fsSL -o /tmp/MA.kt https://raw.githubusercontent.com/G1drohz/lumen-browser/4d5210d99665976cf19387c6c991cdea56d71bc3/android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt
           python3 - <<'PY'
-          import base64, pathlib, zlib, urllib.request
-          # Prefer artifact from this workflow input; fallback download patched from gist is not used
-          # Embed is below
-          b64 = open('ma.zlib.b64','w')
+          from pathlib import Path
+          c = Path('/tmp/MA.kt').read_text()
+          # mobile UA
+          old = '''    private val mobileUa: String by lazy {
+        baseUa.replace("; wv", "").replace(Regex("\\\\s*Version/\\\\d+(\\\\.\\\\d+)*"), "")
+    }'''
+          # fix with explicit mobile chrome
+          start = c.find('private val mobileUa')
+          end = c.find('private val desktopUa')
+          if start < 0 or end < 0: raise SystemExit('ua markers missing')
+          new = '''private val mobileUa: String by lazy {
+        val v = Regex("Chrome/([\\\\d.]+)").find(baseUa)?.groupValues?.get(1) ?: "131.0.0.0"
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$v Mobile Safari/537.36"
+    }
+    '''
+          c = c[:start] + new + c[end:]
+          c = c.replace('s.useWideViewPort = tab.desktop\n        s.loadWithOverviewMode = tab.desktop',
+                        's.useWideViewPort = true\n        s.loadWithOverviewMode = tab.desktop', 1)
+          c = c.replace('''    override fun onPause() {
+        CookieManager.getInstance().flush()
+        tabs.getOrNull(cur)?.web?.onPause()
+        super.onPause()
+    }''',
+          '''    override fun onPause() {
+        CookieManager.getInstance().flush()
+        if (customView == null) tabs.getOrNull(cur)?.web?.onPause()
+        super.onPause()
+    }''', 1)
+          c = c.replace('customView = view\n                customCb = callback\n                (window.decorView as FrameLayout).addView(view, FrameLayout.LayoutParams(-1, -1))',
+                        'customView = view\n                customCb = callback\n                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)\n                (window.decorView as FrameLayout).addView(view, FrameLayout.LayoutParams(-1, -1))', 1)
+          c = c.replace('customCb = null\n        WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())',
+                        'customCb = null\n        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)\n        WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())', 1)
+          c = c.replace('if (adblock && !request.isForMainFrame && Adblock.isBlocked(request.url.host))',
+                        'val h = request.url.host\n                if (adblock && !request.isForMainFrame && h != null && !h.endsWith("googlevideo.com") && !h.endsWith("ytimg.com") && !h.endsWith("ggpht.com") && Adblock.isBlocked(h))', 1)
+          needle = '''            override fun onPageFinished(view: WebView, url: String?) {
+                view.evaluateJavascript(if (darkPages) DARK_JS else LIGHT_JS, null)
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://")) && !isStart(url)) {
+                    view.evaluateJavascript(Store.PW_HOOK, null)
+                    addHistory(view.title ?: url, url)
+                }
+                if (view === web()) progress.visibility = View.GONE
+            }
+        }'''
+          insert = '''            override fun onPageFinished(view: WebView, url: String?) {
+                if (!tab.desktop) {
+                    view.evaluateJavascript("(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';(document.head||document.documentElement).appendChild(m)}m.content='width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes';})();", null)
+                }
+                view.evaluateJavascript(if (darkPages) DARK_JS else LIGHT_JS, null)
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://")) && !isStart(url)) {
+                    view.evaluateJavascript(Store.PW_HOOK, null)
+                    addHistory(view.title ?: url, url)
+                }
+                if (view === web()) progress.visibility = View.GONE
+            }
+            override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                val idx = tabs.indexOfFirst { it.web === view }
+                val logical = if (idx >= 0) tabs[idx].logical else HOME
+                val wasDesktop = if (idx >= 0) tabs[idx].desktop else false
+                try { view.destroy() } catch (_: Exception) {}
+                if (idx >= 0) { tabs.removeAt(idx); holder.removeAllViews() }
+                val t = newTab(logical)
+                t.desktop = wasDesktop
+                applyMode(t)
+                toast("Страница перезагружена после сбоя")
+                return true
+            }
+        }'''
+          if needle not in c: raise SystemExit('onPageFinished not found')
+          c = c.replace(needle, insert, 1)
+          c = c.replace('mediaPlaybackRequiresUserGesture = false\n            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE\n            textZoom = textZoomValue()',
+                        'mediaPlaybackRequiresUserGesture = false\n            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE\n            offscreenPreRaster = true\n            textZoom = textZoomValue()', 1)
+          Path('android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt').write_text(c)
+          print('patched', len(c), c.count('{'), c.count('}'))
           PY
-          true
+      - name: Bump version
+        run: |
+          sed -i 's/versionCode = 31/versionCode = 32/' android/app/build.gradle.kts || true
+          sed -i 's/versionName = "3.1.1"/versionName = "3.2.0"/' android/app/build.gradle.kts || true
+      - name: Commit and push
+        run: |
+          git config user.name "G1dro"
+          git config user.email "berkoaroslav68@gmail.com"
+          git add android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt android/app/build.gradle.kts
+          git commit -m "fix(android): mobile Chrome UA + YouTube stability" || exit 0
+          git push
