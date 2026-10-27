@@ -1,0 +1,19 @@
+name: apply-android-fix
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write MainActivity
+        run: |
+          python3 - <<'PY'
+          import base64, pathlib, zlib, urllib.request
+          # Prefer artifact from this workflow input; fallback download patched from gist is not used
+          # Embed is below
+          b64 = open('ma.zlib.b64','w')
+          PY
+          true
