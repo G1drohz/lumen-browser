@@ -1,7 +1,7 @@
 {
   "name": "lumen-desktop",
   "productName": "Lumen",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Lumen — Chromium-браузер",
   "author": "G1drohz",
   "main": "main.js",
@@ -19,10 +19,34 @@
   "build": {
     "appId": "dev.g1drohz.lumen",
     "productName": "Lumen",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "adblock.js", "shared-path.js", "themes.js", "vault.js", "renderer/**/*"],
-    "extraResources": [{ "from": "../shared", "to": "shared" }],
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "adblock.js",
+      "shared-path.js",
+      "themes.js",
+      "vault.js",
+      "renderer/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../shared",
+        "to": "shared"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -35,7 +59,13 @@
       "language": "1049",
       "artifactName": "Lumen-Setup-${version}.${ext}"
     },
-    "mac": { "target": "dmg", "category": "public.app-category.productivity" },
-    "linux": { "target": "AppImage", "category": "Network" }
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Network"
+    }
   }
 }
