@@ -84,10 +84,11 @@ function bytes(n) {
 lumen.onState((s) => { S = s; render(); });
 lumen.onFocusUrl(() => $('#url').focus());
 lumen.onOpenPanel((name) => {
-  const items = (S.settings && S.settings.sidebarItems) || {};
-  if (S.settings.sidebar === false || items[name] === false) {
+  const set = S.settings || {};
+  const items = set.sidebarItems || {};
+  if (set.sidebar === false || items[name] === false) {
     const sidebarItems = { ...items, [name]: true };
-    lumen.setSettings({ sidebar: true, sidebarItems }).then(() => openPanel(name));
+    lumen.setSettings({ sidebar: true, sidebarItems }).then(() => openPanel(name)).catch(() => openPanel(name));
     return;
   }
   openPanel(name);
@@ -114,11 +115,13 @@ function render() {
   root.setProperty('--ui', String((set.uiScale || 100) / 100));
   root.setProperty('--font', String((set.fontScale || 100) / 100));
   document.body.classList.toggle('nosidebar', set.sidebar === false);
+  ensureSidebarRestore();
   const items = set.sidebarItems || {};
   document.querySelectorAll('#side [data-panel]').forEach((b) => {
     b.hidden = items[b.dataset.panel] === false;
   });
-  if (panel && (set.sidebar === false || items[panel] === false)) closePanel();
+  // панель настроек должна открываться даже без боковой полосы
+  if (panel && items[panel] === false) closePanel();
   const t = activeTab();
   $('#back').disabled = !S.canBack;
   $('#fwd').disabled = !S.canForward;
@@ -192,6 +195,30 @@ $('#url').addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#url')
 document.querySelectorAll('#side [data-panel]').forEach((b) => {
   b.onclick = () => togglePanel(b.dataset.panel);
 });
+
+
+function ensureSidebarRestore() {
+  let btn = document.getElementById('sidebar-restore');
+  const hidden = document.body.classList.contains('nosidebar');
+  if (!hidden) {
+    if (btn) btn.remove();
+    return;
+  }
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'sidebar-restore';
+    btn.type = 'button';
+    btn.title = 'Показать боковую панель (Ctrl+Shift+S)';
+    btn.textContent = '☰';
+    btn.addEventListener('click', async () => {
+      await lumen.setSettings({ sidebar: true });
+      document.body.classList.remove('nosidebar');
+      syncChrome();
+      openPanel('settings');
+    });
+    document.body.appendChild(btn);
+  }
+}
 
 function markSide() {
   document.querySelectorAll('#side [data-panel]').forEach((b) => b.classList.toggle('on', b.dataset.panel === panel));
@@ -404,7 +431,14 @@ async function paintSettings() {
   const custom = s.wallpaper === 'custom' ? await lumen.wallGet() : '';
   if (panel !== name) return;
   const toggle = (key, label) => h('label', { class: 'row' }, h('span', {}, label),
-    h('input', { class: 'sw', type: 'checkbox', checked: !!s[key], onchange: (e) => lumen.setSettings({ [key]: e.target.checked }) }));
+    h('input', { class: 'sw', type: 'checkbox', checked: s[key] !== false, onchange: async (e) => {
+      await lumen.setSettings({ [key]: !!e.target.checked });
+      if (key === 'sidebar') {
+        document.body.classList.toggle('nosidebar', !e.target.checked);
+        syncChrome();
+      }
+      paintSettings();
+    } }));
   const home = h('input', { class: 'text', placeholder: 'https://example.com', value: s.homeUrl || '', spellcheck: false });
   home.addEventListener('change', () => lumen.setSettings({ homeUrl: home.value }));
   const file = h('input', { class: 'clip', type: 'file', accept: 'image/png,image/x-png,image/jpeg,image/jpg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif' });

@@ -862,7 +862,7 @@ function buildMenu() {
         { label: 'Уменьшить', accelerator: 'CmdOrCtrl+-', click: () => changeZoom(-1) },
         { label: 'Сбросить масштаб', accelerator: 'CmdOrCtrl+0', click: () => changeZoom(0) },
         { label: 'На весь экран', accelerator: 'F11', click: () => win && win.setFullScreen(!win.isFullScreen()) },
-        { label: 'Боковая панель', accelerator: 'CmdOrCtrl+Shift+S', click: () => { data.settings = sanitizeSettings(data.settings, { sidebar: !data.settings.sidebar }); save(); layout(); pushState(); } },
+        { label: 'Боковая панель', accelerator: 'CmdOrCtrl+Shift+S', click: () => { const on = !(data.settings && data.settings.sidebar); data.settings = sanitizeSettings(data.settings, { sidebar: on }); save(); layout(); pushState(); if (on) openPanel('settings'); } },
         { type: 'separator' },
         { label: 'История', accelerator: 'CmdOrCtrl+H', click: () => openPanel('history') },
         { label: 'Закладки', accelerator: 'CmdOrCtrl+Shift+O', click: () => openPanel('bookmarks') },
