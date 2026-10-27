@@ -1,0 +1,18 @@
+name: apply-youtube-fix
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/patch_youtube.py
+      - run: node --check desktop/main.js && node --check desktop/adblock.js
+      - run: |
+          git config user.name "G1dro"
+          git config user.email "berkoaroslav68@gmail.com"
+          git add desktop/main.js desktop/adblock.js desktop/package.json
+          git commit -m "fix(desktop): YouTube stable playback (Chrome UA on YT)" || exit 0
+          git push
