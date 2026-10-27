@@ -43,7 +43,7 @@ const ENGINES = {
   brave: { name: 'Brave Search', url: 'https://search.brave.com/search?q=' },
 };
 const ZOOM_STEPS = [25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500];
-const WALL_MAX = 12 * 1024 * 1024;
+const WALL_MAX = 30 * 1024 * 1024;
 const MSG_MAX = 8192;
 
 let win = null;
@@ -133,26 +133,43 @@ function wallpaperDataUrl() {
   } catch { return ''; }
 }
 function saveWallpaper(dataUrl) {
-  const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([a-z0-9+/=\s]+)$/i.exec(String(dataUrl || ''));
-  if (!m) return false;
-  let buf = Buffer.from(m[2].replace(/\s/g, ''), 'base64');
-  let mime = m[1].toLowerCase() === 'jpg' ? 'jpeg' : m[1].toLowerCase();
-  if (!buf.length || buf.length > WALL_MAX) return false;
-  if (mime === 'png' || mime === 'jpeg') {
-    try {
-      // Большие картинки ужимаем до 2560 px: так быстрее открывается каждая новая вкладка
-      let img = nativeImage.createFromBuffer(buf);
-      if (!img.isEmpty() && img.getSize().width > 2560) {
-        img = img.resize({ width: 2560, quality: 'good' });
-        buf = img.toJPEG(88);
+  const raw = String(dataUrl || '').trim();
+  const m = /^data:image\/([a-z0-9.+-]+)(?:;[^,]*)?;base64,([\s\S]+)$/i.exec(raw);
+  if (!m) return { ok: false, error: 'format' };
+  let mime = m[1].toLowerCase().replace(/^x-/, '');
+  if (mime === 'jpg') mime = 'jpeg';
+  if (mime === 'svg+xml') return { ok: false, error: 'format' };
+  if (!/^(png|jpeg|webp|gif)$/.test(mime)) return { ok: false, error: 'format' };
+  let buf;
+  try {
+    buf = Buffer.from(m[2].replace(/\s/g, ''), 'base64');
+  } catch {
+    return { ok: false, error: 'format' };
+  }
+  if (!buf.length) return { ok: false, error: 'empty' };
+  try {
+    let img = nativeImage.createFromBuffer(buf);
+    if (!img.isEmpty()) {
+      const { width, height } = img.getSize();
+      const tooBig = width > 2560 || height > 2560 || buf.length > 6 * 1024 * 1024;
+      if (tooBig) {
+        const scale = Math.min(1, 2560 / Math.max(width, height, 1));
+        const w = Math.max(1, Math.round(width * scale));
+        img = img.resize({ width: w, quality: 'good' });
+        buf = img.toJPEG(85);
         mime = 'jpeg';
       }
-    } catch { /* оставляем оригинал */ }
+    }
+  } catch { /* оригинал */ }
+  if (buf.length > WALL_MAX) return { ok: false, error: 'size' };
+  try {
+    fs.writeFileSync(wallFile(), buf);
+    fs.writeFileSync(wallFile() + '.mime', mime);
+  } catch {
+    return { ok: false, error: 'write' };
   }
-  fs.writeFileSync(wallFile(), buf);
-  fs.writeFileSync(wallFile() + '.mime', mime);
   wallCache = null;
-  return true;
+  return { ok: true };
 }
 
 // ---------- адреса ----------
@@ -949,12 +966,13 @@ handle('settings:set', (patch) => {
 });
 
 handle('wall:set', (dataUrl) => {
-  const ok = saveWallpaper(dataUrl);
+  const result = saveWallpaper(dataUrl);
+  const ok = !!(result && result.ok);
   if (ok) data.settings = sanitizeSettings(data.settings, { wallpaper: 'custom' });
   save();
-  for (const t of tabs.values()) decorateStart(t).catch(() => {});
+  if (ok) for (const t of tabs.values()) decorateStart(t).catch(() => {});
   pushState();
-  return ok;
+  return result && typeof result === 'object' ? result : { ok: false, error: 'format' };
 });
 handle('wall:get', () => (data.settings.wallpaper === 'custom' ? wallpaperDataUrl() : ''));
 on('wall:clear', () => {

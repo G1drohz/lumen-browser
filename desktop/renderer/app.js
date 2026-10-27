@@ -407,7 +407,7 @@ async function paintSettings() {
     h('input', { class: 'sw', type: 'checkbox', checked: !!s[key], onchange: (e) => lumen.setSettings({ [key]: e.target.checked }) }));
   const home = h('input', { class: 'text', placeholder: 'https://example.com', value: s.homeUrl || '', spellcheck: false });
   home.addEventListener('change', () => lumen.setSettings({ homeUrl: home.value }));
-  const file = h('input', { class: 'clip', type: 'file', accept: 'image/png,image/jpeg,image/jpg,image/webp,image/gif' });
+  const file = h('input', { class: 'clip', type: 'file', accept: 'image/png,image/x-png,image/jpeg,image/jpg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif' });
   file.addEventListener('change', () => {
     const f = file.files && file.files[0];
     if (!f) return;
@@ -417,9 +417,16 @@ async function paintSettings() {
     }
     const reader = new FileReader();
     reader.onload = async () => {
-      const ok = await lumen.wallSet(String(reader.result || ''));
-      if (ok) paintSettings();
-      else alert('Не удалось сохранить обои. Нужен PNG, JPEG, WebP или GIF.');
+      const res = await lumen.wallSet(String(reader.result || ''));
+      const ok = res === true || (res && res.ok);
+      if (ok) {
+        paintSettings();
+        return;
+      }
+      const err = res && res.error;
+      if (err === 'size') alert('Файл слишком большой. Нужно изображение до 30 МБ (крупные PNG автоматически ужимаются).');
+      else if (err === 'write') alert('Не удалось записать файл обоев. Проверьте права на папку приложения.');
+      else alert('Не удалось сохранить обои. Поддерживаются PNG, JPEG, WebP и GIF.');
     };
     reader.onerror = () => alert('Не удалось прочитать файл.');
     reader.readAsDataURL(f);
