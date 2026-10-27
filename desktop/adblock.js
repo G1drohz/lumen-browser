@@ -18,7 +18,18 @@ function loadList() {
 
 // host совпадает с записью списка или является её поддоменом
 function isBlocked(host) {
-  let h = host.toLowerCase();
+  let h = (host || '').toLowerCase();
+  if (
+    h.endsWith('googlevideo.com') ||
+    h.endsWith('ytimg.com') ||
+    h.endsWith('youtube.com') ||
+    h.endsWith('youtu.be') ||
+    h.endsWith('ggpht.com') ||
+    h.endsWith('googleusercontent.com') ||
+    h.endsWith('gvt1.com')
+  ) {
+    return false;
+  }
   for (;;) {
     if (hosts.has(h)) return true;
     const i = h.indexOf('.');

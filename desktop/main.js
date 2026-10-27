@@ -1168,16 +1168,17 @@ if (!gotLock) {
         : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0';
   try { app.userAgentFallback = chromeUA; } catch (_) {}
   ses.setUserAgent(chromeUA);
-  const googleHost =
-    /(?:^|\.)(google\.com|google\.[a-z]{2,3}|googleapis\.com|gstatic\.com|youtube\.com|gmail\.com|googleusercontent\.com)(?::|\/|$)/i;
+  // Firefox UA только для входа в Google. На YouTube — Chrome, иначе видео падает через 1–2 минуты.
+  const googleAuthHost =
+    /(?:^|\.)(accounts\.google\.com|myaccount\.google\.com|ogs\.google\.com|gmail\.com)(?::|\/|$)/i;
   try {
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
       const h = Object.assign({}, details.requestHeaders || {});
       let host = '';
       try { host = new URL(details.url).hostname; } catch (_) {}
-      const isGoogle = googleHost.test(host);
-      h['User-Agent'] = isGoogle ? firefoxUA : chromeUA;
-      if (isGoogle) {
+      const isAuth = googleAuthHost.test(host);
+      h['User-Agent'] = isAuth ? firefoxUA : chromeUA;
+      if (isAuth) {
         delete h['sec-ch-ua'];
         delete h['sec-ch-ua-mobile'];
         delete h['sec-ch-ua-platform'];

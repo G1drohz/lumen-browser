@@ -1,7 +1,7 @@
 {
   "name": "lumen-desktop",
   "productName": "Lumen",
-  "version": "3.2.4",
+  "version": "3.2.5",
   "description": "Lumen — Chromium-браузер",
   "author": "G1drohz",
   "main": "main.js",
