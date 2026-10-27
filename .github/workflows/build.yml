@@ -18,12 +18,6 @@ jobs:
         working-directory: desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Bake full main.js + patch
-        shell: bash
-        run: |
-          curl -fsSL "https://raw.githubusercontent.com/G1drohz/lumen-browser/66d245802e30420d5f8135add2de8cafe9eb6f3b/desktop/main.js" -o main.js
-          node scripts/patch-main.js
-          node --check main.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,15 +28,14 @@ jobs:
           for f in main.js preload.js adblock.js shared-path.js themes.js vault.js smoke.js scripts/make-icon.js renderer/app.js; do
             node --check "$f"
           done
+      # Смоук-тест запускает настоящее приложение. Падение теста = красная сборка.
       - name: Smoke test (Linux)
         if: runner.os == 'Linux'
-        timeout-minutes: 2
-        continue-on-error: true
+        timeout-minutes: 3
         run: xvfb-run -a npx electron . --no-sandbox --disable-gpu --smoke-test
       - name: Smoke test (Windows)
         if: runner.os == 'Windows'
-        timeout-minutes: 2
-        continue-on-error: true
+        timeout-minutes: 3
         run: npx electron . --smoke-test
       - run: npm run dist
         env:
