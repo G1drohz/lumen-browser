@@ -44,18 +44,20 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
-      - name: Restore MainActivity
+      - name: Assemble MainActivity from parts if present
         working-directory: .
         run: |
-          set -e
-          python3 scripts/patch_android_main.py || true
-          # If still PLACEHOLDER, fail clearly
+          if [ -f scripts/cat_ma.py ]; then
+            python3 scripts/cat_ma.py
+          else
+            python3 scripts/patch_android_main.py || true
+          fi
+          sed -i 's/versionCode = [0-9]*/versionCode = 33/' android/app/build.gradle.kts || true
+          sed -i 's/versionName = "[^"]*"/versionName = "3.3.0"/' android/app/build.gradle.kts || true
           if grep -q PLACEHOLDER android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt 2>/dev/null; then
-            echo "MainActivity is PLACEHOLDER — need restore"
+            echo "ERROR: MainActivity still PLACEHOLDER"
             exit 1
           fi
-          sed -i 's/versionCode = [0-9]*/versionCode = 33/' android/app/build.gradle.kts
-          sed -i 's/versionName = "[^"]*"/versionName = "3.3.0"/' android/app/build.gradle.kts
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -72,7 +74,8 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [windows, android]
+    needs: [windows]
+    if: always() && needs.windows.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -86,12 +89,12 @@ jobs:
           body: |
             **Lumen 3.3.0**
 
-            - Верхняя панель в стиле Ecosia (телефон + ПК)
+            - Верхняя панель в стиле Ecosia (ПК)
             - Плавные анимации
             - Мобильный просмотр страниц
             - Стабильность YouTube
             - Менеджер паролей, темы, обои
 
             **Windows:** `Lumen-Setup-3.3.0.exe`
-            **Android:** `Lumen-android.apk`
+            **Android:** APK появится в следующем билде, если MainActivity восстановлен.
           files: dist/*
