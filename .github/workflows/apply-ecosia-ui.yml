@@ -8,7 +8,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - run: python3 scripts/patch_ecosia_ui.py
+      - run: python3 scripts/fix_buildbar.py || true
       - run: python3 scripts/patch_ecosia_desktop.py
       - run: |
           git config user.name "G1dro"
