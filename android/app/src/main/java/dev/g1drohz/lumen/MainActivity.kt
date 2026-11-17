@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -147,15 +148,16 @@ class MainActivity : AppCompatActivity() {
             max = 100
             visibility = View.GONE
             progressTintList = android.content.res.ColorStateList.valueOf(accent)
+            scaleY = 0.6f
         }
         holder = FrameLayout(this)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             fitsSystemWindows = true
             setBackgroundColor(bg)
-            addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
-            addView(holder, LinearLayout.LayoutParams(-1, 0, 1f))
             addView(buildBar(), LinearLayout.LayoutParams(-1, -2))
+            addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
+            addView(holder, LinearLayout.LayoutParams(-1, 0, 1f))
         }
         setContentView(root)
         @Suppress("DEPRECATION")
@@ -219,15 +221,27 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- интерфейс ----------
     private fun buildBar(): View {
-        fun icon(t: String, onClick: (View) -> Unit) = TextView(this).apply {
+        fun pillBg(radius: Float = dp(22).toFloat(), fill: Int = pill) = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(fill)
+        }
+        fun iconBtn(t: String, onClick: (View) -> Unit) = TextView(this).apply {
             text = t
-            textSize = 22f
+            textSize = 20f
             setTextColor(fg)
             gravity = Gravity.CENTER
-            minHeight = dp(44)
-            setOnClickListener { v -> onClick(v) }
+            minWidth = dp(42)
+            minHeight = dp(42)
+            background = pillBg(dp(14).toFloat()
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener { v ->
+                v.animate().scaleX(1.08).scaleY(1.08).setDuration(100).withEndAction {
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                }.start()
+                onClick(v)
+            }
         }
-
         urlBox = EditText(this).apply {
             setSingleLine()
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
@@ -237,10 +251,7 @@ class MainActivity : AppCompatActivity() {
             setTextColor(fg)
             setHintTextColor(mute)
             gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
-                setColor(pill)
-            }
+            background = pillBg()
             setPadding(dp(14), dp(10), dp(14), dp(10))
             setOnFocusChangeListener { _, focused ->
                 if (focused) {
@@ -249,7 +260,7 @@ class MainActivity : AppCompatActivity() {
                     post { selectAll() }
                 } else {
                     gravity = Gravity.CENTER
-                    showUrl(tabs.getOrNull(cur)?.web?.url)
+                    showUrl(tabs.getOrNull(cur)?.web.url)
                 }
             }
             setOnEditorActionListener { _, action, _ ->
@@ -259,26 +270,40 @@ class MainActivity : AppCompatActivity() {
                 } else false
             }
         }
-
-        tabBtn = icon("⧉ 1") { _ -> showTabs() }.apply { textSize = 16f }
-
-        val row = LinearLayout(this).apply {
+        tabBtn = iconBtn("⊢ 1") { _ -> showTabs() }.apply { textSize = 16f }
+        val brand = TextView(this).apply {
+            text = "LUMEN"
+            textSize = 18f
+            setTypeface(true)
+            setTextColor(fg)
+            gravity = Gravity.CENTER
+        }
+        val topRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), 0, dp(4), 0)
+            addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(tabBtn, LinearLayout.LayoutParams(-2, -2))
+        }
+        val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             listOf(
-                icon("‹") { _ -> if (web().canGoBack()) web().goBack() },
-                icon("›") { _ -> if (web().canGoForward()) web().goForward() },
-                icon("☆") { _ -> toggleBookmark() },
-                tabBtn,
-                icon("⋯") { anchor -> showMenu(anchor) },
+                iconBtn("◢) { _ -> if (web().canGoBack()) web().goBack() },
+                iconBtn("◣) { _ -> if (web().canGoForward()) web().goForward() },
+                iconBtn("△) { _ -> web().reload() },
+                iconBtn("☆") { _ -> toggleBookmark() },
+                iconBtn("⌂") { _ -> load(tabs[cur], HOME) },
             ).forEach { addView(it, LinearLayout.LayoutParams(0, -2, 1f)) }
         }
 
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
-            setPadding(dp(10), dp(6), dp(10), dp(2))
-            addView(urlBox, LinearLayout.LayoutParams(-1, -2))
-            addView(row, LinearLayout.LayoutParams(-1, -2))
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            elevation = dp(4).toFloat()
+            addView(topRow, LinearLayout.LayoutParams(-1, -2))
+            addView(urlBox, LinearLayout.LayoutParams(-1, -2).also { it.topMargin = dp(8) })
+            addView(nav, LinearLayout.LayoutParams(-1, -2).also { it.topMargin = dp(4) })
         }
     }
 
@@ -413,7 +438,18 @@ class MainActivity : AppCompatActivity() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 if (view === web()) {
                     progress.progress = newProgress
-                    progress.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
+                    if (newProgress in 1..99) {
+                        if (progress.visibility != View.VISIBLE) {
+                            progress.alpha = 0f
+                            progress.visibility = View.VISIBLE
+                            progress.animate().alpha(1f).setDuration(160).start()
+                        }
+                    } else if (progress.visibility == View.VISIBLE) {
+                        progress.animate().alpha(0f).setDuration(200).withEndAction {
+                            progress.visibility = View.GONE
+                            progress.alpha = 1f
+                        }.start()
+                    }
                 }
             }
 
