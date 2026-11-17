@@ -44,56 +44,18 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
-      - name: Restore MainActivity from last known-good commit
+      - name: Restore MainActivity
         working-directory: .
         run: |
           set -e
-          # Last good full MainActivity (mobile UA + YouTube stability)
-          git show bb1581bfe1bd4357b5980d740c394234ab2072c7:android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt \
-            > android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt
-          # Ensure version 3.3.0
+          python3 scripts/patch_android_main.py || true
+          # If still PLACEHOLDER, fail clearly
+          if grep -q PLACEHOLDER android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt 2>/dev/null; then
+            echo "MainActivity is PLACEHOLDER — need restore"
+            exit 1
+          fi
           sed -i 's/versionCode = [0-9]*/versionCode = 33/' android/app/build.gradle.kts
           sed -i 's/versionName = "[^"]*"/versionName = "3.3.0"/' android/app/build.gradle.kts
-          # Light Ecosia-style: move chrome to top if still bottom
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt")
-          c = p.read_text()
-          if "import android.graphics.Color" not in c:
-              c = c.replace("import android.graphics.Bitmap", "import android.graphics.Bitmap\nimport android.graphics.Color")
-          old = """            addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
-            addView(holder, LinearLayout.LayoutParams(-1, 0, 1f))
-            addView(buildBar(), LinearLayout.LayoutParams(-1, -2))"""
-          new = """            addView(buildBar(), LinearLayout.LayoutParams(-1, -2))
-            addView(progress, LinearLayout.LayoutParams(-1, dp(2)))
-            addView(holder, LinearLayout.LayoutParams(-1, 0, 1f))"""
-          if old in c:
-              c = c.replace(old, new, 1)
-              print("chrome moved to top")
-          else:
-              print("layout already top or pattern missing")
-          # Soft progress fade if simple visibility still used
-          old_p = "progress.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE"
-          new_p = """if (newProgress in 1..99) {
-                        if (progress.visibility != View.VISIBLE) {
-                            progress.alpha = 0f
-                            progress.visibility = View.VISIBLE
-                            progress.animate().alpha(1f).setDuration(160).start()
-                        }
-                    } else if (progress.visibility == View.VISIBLE) {
-                        progress.animate().alpha(0f).setDuration(200).withEndAction {
-                            progress.visibility = View.GONE
-                            progress.alpha = 1f
-                        }.start()
-                    }"""
-          if old_p in c:
-              c = c.replace(old_p, new_p, 1)
-              print("progress anim")
-          assert "PLACEHOLDER" not in c
-          assert c.count("{") == c.count("}")
-          p.write_text(c)
-          print("MainActivity ready", len(c))
-          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -125,7 +87,7 @@ jobs:
             **Lumen 3.3.0**
 
             - Верхняя панель в стиле Ecosia (телефон + ПК)
-            - Плавные анимации кнопок и progress
+            - Плавные анимации
             - Мобильный просмотр страниц
             - Стабильность YouTube
             - Менеджер паролей, темы, обои
