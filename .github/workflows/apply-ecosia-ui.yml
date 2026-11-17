@@ -1,1 +1,19 @@
-PLACEHOLDER3
+name: apply-ecosia-ui
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/patch_ecosia_ui.py
+      - run: python3 scripts/patch_ecosia_desktop.py
+      - run: |
+          git config user.name "G1dro"
+          git config user.email "berkoaroslav68@gmail.com"
+          git add android/app/src/main/java/dev/g1drohz/lumen/MainActivity.kt android/app/build.gradle.kts desktop/renderer/style.css desktop/package.json
+          git status
+          git commit -m "ui: Ecosia-style top bar + smooth animations (3.3.0)" || exit 0
+          git push
